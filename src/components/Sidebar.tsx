@@ -55,7 +55,15 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-hairline-dark">
-        <button className="w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-sm font-semibold text-on-dark-mute hover:text-on-dark hover:bg-surface-elevated bg-transparent rounded-full">
+        <button 
+          onClick={() => setView('settings')}
+          className={clsx(
+            "w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-sm font-semibold rounded-full bg-transparent border-none outline-none cursor-pointer",
+            view === 'settings' 
+              ? "bg-canvas-light text-canvas-dark" 
+              : "text-on-dark-mute hover:text-on-dark hover:bg-surface-elevated"
+          )}
+        >
           <Settings className="w-4 h-4 shrink-0" />
           System Settings
         </button>

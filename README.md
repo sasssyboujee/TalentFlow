@@ -35,6 +35,12 @@
 * **Tailored Mapping:** Add your technology portfolios, links, and project descriptions inside your profile.
 * **Keyword Synthesis:** The AI automatically extracts tech-stack tags from job descriptions and dynamically inserts the two most relevant projects into your tailored resume templates.
 
+### System Settings Manager
+* **Custom API Key & Model Configuration:** Override environment variables by saving your API key directly in local storage and switching between `gemini-3.5-flash` and `gemini-2.5-pro` dynamically.
+* **Agent Rate-Limiting & Thresholds:** Configure custom scraper timeouts and minimum match thresholds.
+* **Coaching Personas:** Adjust the AI Interview Coach profile (STAR Coach, HR Recruiter, Technical Lead) and grading difficulty.
+* **Workspace Data Backups:** Export your entire workspace (profile data, tracking logs, and settings) as a single JSON file, or import backups to restore states.
+
 ---
 
 ## Technology Stack

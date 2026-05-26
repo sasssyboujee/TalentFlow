@@ -9,8 +9,28 @@ if (!apiKey) {
 }
 
 const ai = new GoogleGenAI({
-  apiKey: apiKey,
+  apiKey: apiKey || '',
 });
+
+function getClientAndModel(defaultModel = 'gemini-3.5-flash'): { client: GoogleGenAI; model: string } {
+  let client = ai;
+  let model = defaultModel;
+  try {
+    const savedSettings = localStorage.getItem('agent_settings');
+    if (savedSettings) {
+      const parsed = JSON.parse(savedSettings);
+      if (parsed.geminiApiKey) {
+        client = new GoogleGenAI({ apiKey: parsed.geminiApiKey });
+      }
+      if (parsed.geminiModel) {
+        model = parsed.geminiModel;
+      }
+    }
+  } catch (e) {
+    // Ignore
+  }
+  return { client, model };
+}
 
 export interface JobMatchAnalysis {
   company: string;
@@ -29,6 +49,21 @@ export async function analyzeJobMatch(
   profile: UserProfile,
   maxRetries = 3
 ): Promise<JobMatchAnalysis> {
+  let strictOnePage = true;
+  try {
+    const savedSettings = localStorage.getItem('agent_settings');
+    if (savedSettings) {
+      const parsed = JSON.parse(savedSettings);
+      if (parsed.strictOnePage !== undefined) {
+        strictOnePage = !!parsed.strictOnePage;
+      }
+    }
+  } catch (e) {}
+
+  const resumeSnippetConstraint = strictOnePage 
+    ? "Keep it extremely compact (maximum of 3 sentences, roughly 60-70 words) so that the tailored resume can fit neatly on a single printed page."
+    : "Write a detailed and comprehensive professional summary (4-6 sentences, roughly 100-150 words) highlighting their relevant experience in depth.";
+
   const prompt = `
 You are an expert AI career coach and recruiter. Your task is to analyze the provided Job Description (JD) and the User Profile, and then output a structured JSON analysis.
 
@@ -52,7 +87,7 @@ INSTRUCTIONS:
 1. Extract the "company" name and "role" title from the job description. (If not found, use "Unknown").
 2. Calculate a "matchScore" (0 to 100) based on how well the User Profile aligns with the Job Description.
 3. Identify "matchingKeywords" (skills the user has that the job requires) and "missingKeywords" (skills the job requires that the user is missing).
-4. Generate a "tailoredResumeSnippet". This is a professional summary written in the first person that highlights the user's matching skills and aligns their experience with the job description. Keep it extremely compact (maximum of 3 sentences, roughly 60-70 words) so that the tailored resume can fit neatly on a single printed page. Format using Markdown.
+4. Generate a "tailoredResumeSnippet". This is a professional summary written in the first person that highlights the user's matching skills and aligns their experience with the job description. ${resumeSnippetConstraint} Format using Markdown.
 5. Generate a "tailoredCoverLetter". This is a full, professional cover letter (3-4 paragraphs, roughly 250-350 words) written in the first person. Include headers (sender info, placeholder date, addressing the hiring team), introduce the role, highlight 1-2 major matching achievements from the user's experience that directly address the JD's requirements, and sign off professionally. Format using Markdown.
 6. Generate "interviewPrep". A list of 3 to 5 realistic technical or behavioral questions specific to this role that the interviewer might ask, along with highly tailored, recommended answers based on the user's background.
 7. Score "skillCategories". Analyze and rate both the user's current skill and the job's demand (0 to 100) across these 5 categories: "Frontend", "Backend", "AI / Data", "DevOps", and "Soft Skills".
@@ -84,8 +119,9 @@ Output MUST be valid JSON matching this schema:
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+      const { client, model } = getClientAndModel();
+      const response = await client.models.generateContent({
+        model: model,
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -174,8 +210,9 @@ Output MUST be valid JSON matching this schema exactly:
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+      const { client, model } = getClientAndModel();
+      const response = await client.models.generateContent({
+        model: model,
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -223,8 +260,34 @@ export async function gradeInterviewAnswer(
   profile: UserProfile,
   maxRetries = 3
 ): Promise<GradeReport> {
+  let coachPersona = 'star';
+  let coachDifficulty = 'strict';
+  try {
+    const savedSettings = localStorage.getItem('agent_settings');
+    if (savedSettings) {
+      const parsed = JSON.parse(savedSettings);
+      if (parsed.coachPersona) coachPersona = parsed.coachPersona;
+      if (parsed.coachDifficulty) coachDifficulty = parsed.coachDifficulty;
+    }
+  } catch (e) {}
+
+  const personaInstruction = 
+    coachPersona === 'recruiter' 
+      ? 'Adopt the persona of a senior corporate recruiter. Focus heavily on keyword matching, confidence, and how well the candidate highlights business value and personal branding.' 
+      : coachPersona === 'tech'
+      ? 'Adopt the persona of a lead technical architect. Focus heavily on technical correctness, engineering depth, architectural decisions, and specific technology details.'
+      : 'Adopt the persona of a structured STAR methodology communication coach. Focus heavily on ensuring they clearly define the Situation, Task, Action, and Result.';
+
+  const difficultyInstruction = 
+    coachDifficulty === 'encouraging'
+      ? 'Be encouraging and constructive in your feedback. Be slightly more lenient with grading, scoring the response on a gentler scale.'
+      : 'Be extremely critical, high-bar, and rigorous. Score the response very strictly, demanding high-level executive communication, clear metrics, and no fluff.';
+
   const prompt = `
 You are an expert technical interviewer and executive communication coach.
+${personaInstruction}
+${difficultyInstruction}
+
 Evaluate the user's mock interview answer to the specified question.
 
 QUESTION:
@@ -265,8 +328,9 @@ Output MUST be valid JSON matching this schema:
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+      const { client, model } = getClientAndModel();
+      const response = await client.models.generateContent({
+        model: model,
         contents: prompt,
         config: {
           responseMimeType: 'application/json',

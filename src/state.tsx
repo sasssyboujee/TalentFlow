@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { JobApplication, UserProfile, ViewState, AgentLog } from './types';
+import type { JobApplication, UserProfile, ViewState, AgentLog, SystemSettings } from './types';
 
 // Initial Mock Data
 const INITIAL_PROFILE: UserProfile = {
@@ -98,6 +98,20 @@ const INITIAL_JOBS: JobApplication[] = [
   }
 ];
 
+const DEFAULT_SETTINGS: SystemSettings = {
+  geminiApiKey: '',
+  geminiModel: 'gemini-3.5-flash',
+  scraperDelay: 2,
+  minMatchThreshold: 70,
+  autoOverwriteSkills: false,
+  autoExtractLocation: true,
+  strictOnePage: true,
+  resumeTheme: 'cobalt',
+  resumeFont: 'sans',
+  coachPersona: 'star',
+  coachDifficulty: 'strict',
+};
+
 interface AppStateContextType {
   view: ViewState;
   setView: (view: ViewState) => void;
@@ -109,12 +123,35 @@ interface AppStateContextType {
   updateApplicationStatus: (id: string, status: JobApplication['status']) => void;
   updateApplicationLogs: (id: string, logs: AgentLog[], incremental?: boolean) => void;
   updateApplicationDetails: (id: string, updates: Partial<JobApplication>) => void;
+  settings: SystemSettings;
+  updateSettings: (updates: Partial<SystemSettings>) => void;
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
 
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [view, setView] = useState<ViewState>('dashboard');
+  
+  // Persist Settings
+  const [settings, setSettingsState] = useState<SystemSettings>(() => {
+    try {
+      const saved = localStorage.getItem('agent_settings');
+      if (saved) {
+        return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+      }
+      return DEFAULT_SETTINGS;
+    } catch {
+      return DEFAULT_SETTINGS;
+    }
+  });
+
+  const updateSettings = (updates: Partial<SystemSettings>) => {
+    setSettingsState(prev => {
+      const newSettings = { ...prev, ...updates };
+      localStorage.setItem('agent_settings', JSON.stringify(newSettings));
+      return newSettings;
+    });
+  };
   
   // Persist Profile
   const [profile, setProfileState] = useState<UserProfile>(() => {
@@ -195,7 +232,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     <AppStateContext.Provider value={{
       view, setView,
       profile, setProfile,
-      applications, addApplication, deleteApplication, updateApplicationStatus, updateApplicationLogs, updateApplicationDetails
+      applications, addApplication, deleteApplication, updateApplicationStatus, updateApplicationLogs, updateApplicationDetails,
+      settings, updateSettings
     }}>
       {children}
     </AppStateContext.Provider>

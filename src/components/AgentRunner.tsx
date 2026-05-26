@@ -73,7 +73,24 @@ export function AgentRunner() {
       }
       setCurrentStep(1);
 
-      internalPushLog(`Sending JD and profile to Gemini 2.5 Flash for analysis...`);
+      // Get settings for scraper delay
+      let scraperDelay = 2;
+      try {
+        const savedSettings = localStorage.getItem('agent_settings');
+        if (savedSettings) {
+          const parsed = JSON.parse(savedSettings);
+          if (parsed.scraperDelay !== undefined) {
+            scraperDelay = Number(parsed.scraperDelay);
+          }
+        }
+      } catch (e) {}
+
+      if (scraperDelay > 0) {
+        internalPushLog(`Respecting rate-limit: Pausing for ${scraperDelay}s before processing...`);
+        await new Promise(r => setTimeout(r, scraperDelay * 1000));
+      }
+
+      internalPushLog(`Sending JD and profile to Gemini for analysis...`);
       
       const analysis = await analyzeJobMatch(finalJdText, profile);
       

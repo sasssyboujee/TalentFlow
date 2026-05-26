@@ -79,5 +79,19 @@ export interface UserProfile {
   lastUpdated: string;
 }
 
-export type ViewState = 'dashboard' | 'runner' | 'tracker' | 'profile';
+export interface SystemSettings {
+  geminiApiKey: string;
+  geminiModel: string;
+  scraperDelay: number;
+  minMatchThreshold: number;
+  autoOverwriteSkills: boolean;
+  autoExtractLocation: boolean;
+  strictOnePage: boolean;
+  resumeTheme: string;
+  resumeFont: string;
+  coachPersona: string;
+  coachDifficulty: string;
+}
+
+export type ViewState = 'dashboard' | 'runner' | 'tracker' | 'profile' | 'settings';
 
