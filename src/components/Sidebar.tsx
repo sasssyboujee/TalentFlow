@@ -15,14 +15,20 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 bg-canvas-dark text-on-dark-mute flex flex-col h-screen shrink-0 border-r border-hairline-dark">
-      <div className="p-6 border-b border-hairline-dark flex items-center gap-4">
-        <div className="w-10 h-7 rounded-lg bg-primary flex items-center justify-center flex-shrink-0 relative overflow-hidden transform -rotate-12 border border-primary-focus">
-          <div className="absolute top-1 left-1.5 w-3 h-2 bg-accent-yellow rounded-[2px] opacity-90" />
-          <span className="text-[9px] font-bold text-on-primary absolute bottom-0.5 right-1.5 font-mono tracking-tighter">AJ</span>
-        </div>
+      <div className="p-6 border-b border-hairline-dark flex items-center gap-3">
+        <svg className="w-9 h-9 shrink-0" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#494fdf" />
+              <stop offset="100%" stopColor="#00a87e" />
+            </linearGradient>
+          </defs>
+          <rect x="4" y="4" width="24" height="24" rx="8" fill="url(#logo-gradient)" />
+          <path d="M10 11H22M16 11V22M16 16.5H20.5" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
         <div>
-          <h1 className="font-display font-semibold text-on-dark text-lg tracking-tight leading-none">AutoJob</h1>
-          <p className="text-[10px] uppercase tracking-wider text-on-dark-mute font-mono mt-1">Agent Suite</p>
+          <h1 className="font-display font-semibold text-on-dark text-lg tracking-tight leading-none">TalentFlow</h1>
+          <p className="text-[10px] uppercase tracking-wider text-on-dark-mute font-mono mt-1">AI Career Suite</p>
         </div>
       </div>
 

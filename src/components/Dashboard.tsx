@@ -18,8 +18,8 @@ export function Dashboard() {
     <div className="w-full min-h-full flex flex-col bg-canvas-light">
       {/* Header Tile */}
       <div className="w-full px-12 py-20 bg-canvas-light text-left max-w-7xl mx-auto border-b border-hairline-light">
-        <h1 className="text-display-xl text-ink mb-4 font-semibold tracking-tight uppercase">Overview</h1>
-        <p className="text-lead text-charcoal max-w-2xl">Your automated agent activity and job pipeline.</p>
+        <h1 className="text-display-xl text-ink mb-4 font-semibold tracking-tight uppercase">TalentFlow</h1>
+        <p className="text-lead text-charcoal max-w-2xl">Monitor your autonomous application agents and active recruitment pipelines.</p>
       </div>
 
       {/* Stats Grid - Edge-to-Edge */}

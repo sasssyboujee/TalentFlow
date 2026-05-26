@@ -37,10 +37,10 @@ const INITIAL_PROFILE: UserProfile = {
   projects: [
     {
       id: "proj-1",
-      name: "Autonomous Job Search Agent",
+      name: "TalentFlow AI Career Suite",
       description: "Developed an agentic workspace that scrapes JDs, matches skills via vector embeddings, and generates custom targeted resume profiles using Gemini.",
       technologies: ["React", "TypeScript", "Vite", "Gemini API"],
-      url: "https://github.com/alexdev/autojob-agent"
+      url: "https://github.com/alexdev/talentflow-agent"
     }
   ],
   location: "San Francisco, CA",
