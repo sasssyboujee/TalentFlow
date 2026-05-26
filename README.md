@@ -1,7 +1,7 @@
 <div align="center">
   <img width="1200" height="400" alt="TalentFlow Header Banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" style="border-radius: 16px; object-fit: cover;" />
 
-  # 🚀 TalentFlow AI Career Suite
+  # TalentFlow AI Career Suite
 
   **An autonomous career manager and agent workspace that tailors resumes, scrapes job descriptions, simulates mock interviews, and tracks application pipelines in real-time.**
 
@@ -13,32 +13,32 @@
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
-### 🔄 Autonomous Scraper & Gantt Timeline
+### Autonomous Scraper & Gantt Timeline
 * **Agent Runner:** Deploy an autonomous agent that scrapes job descriptions from active URLs or raw text.
 * **Gantt progress tracker:** Monitor the agent's work in real-time through an interactive horizontal Gantt chart detailing each stage (DOM extraction, tokenization, FAISS vector index matching, resume summary synthesis, workspace persistence) with pulsing micro-animations.
 
-### 🎙️ AI Interview Coach & Sandbox Simulator
+### AI Interview Coach & Sandbox Simulator
 * **Interactive Interview prep:** Practice answering mock interview questions inside a dedicated sandbox terminal interface.
 * **Structured STAR Evaluation:** Gemini grades your mock response against the **STAR method** (Situation, Task, Action, Result), scoring your answers from 0-100.
 * **Re-Script recommendation:** Receive constructive feedback and a fully polished, professional re-script recommendation aligned with your personal profile.
 
-### 📋 Drag-and-Drop Kanban Board
+### Drag-and-Drop Kanban Board
 * **Tactile Workflow:** Move application cards across columns representing pipelines (*Queued, Ready, Applied, Interview, Rejected*).
 * **Native Physics:** Built using native HTML5 drag-and-drop APIs (zero external dependencies) with active column drop-glow scaling.
 
-### 📄 ATS-Compliant 1-Page Resume Builder
+### ATS-Compliant 1-Page Resume Builder
 * **Selectable Text Layer:** Replaces standard JS image-canvas PDF renderers with the browser's native print API (`window.print()`), ensuring PDFs are 100% searchable, select-enabled, and optimized for ATS parsers.
 * **Auto-Sized Page Constraint:** Implements a strict typographical grid scale that clamps summary lengths (maximum 3 sentences) and layouts to fit exactly onto a single page without overflowing.
 
-### 💼 Portfolio Projects Manager
+### Portfolio Projects Manager
 * **Tailored Mapping:** Add your technology portfolios, links, and project descriptions inside your profile.
 * **Keyword Synthesis:** The AI automatically extracts tech-stack tags from job descriptions and dynamically inserts the two most relevant projects into your tailored resume templates.
 
 ---
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 * **Core Framework:** React 18 & TypeScript
 * **Styling & Motion:** Tailwind CSS, Lucide icons, glassmorphic layout models
@@ -48,7 +48,7 @@
 
 ---
 
-## 🚀 Quick Start & Installation
+## Quick Start & Installation
 
 ### Prerequisites
 Make sure you have [Node.js](https://nodejs.org/) installed (v18+ recommended).
@@ -73,7 +73,7 @@ Open `.env` and enter your Gemini API key:
 ```env
 VITE_GEMINI_API_KEY="your_actual_gemini_api_key"
 ```
-> 🔑 **Need a key?** Get one for free from [Google AI Studio](https://aistudio.google.com/).
+> **Need a key?** Get one for free [here](https://aistudio.google.com/).
 
 ### 4. Run the development server
 ```bash
@@ -88,7 +88,7 @@ npm run build
 
 ---
 
-## 🖨️ Resume PDF Export Tips
+## Resume PDF Export Tips
 
 For the best quality resume and cover letter PDF exports:
 1. Click **Download Resume** or **Download Cover Letter** inside any tracked application card.
@@ -98,5 +98,5 @@ For the best quality resume and cover letter PDF exports:
 
 ---
 
-## 📄 License
+## License
 Distributed under the MIT License. See `LICENSE` for more information.
