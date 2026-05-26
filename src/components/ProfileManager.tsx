@@ -11,6 +11,8 @@ export function ProfileManager() {
   const [formData, setFormData] = useState({
     ...profile,
     location: profile.location || '',
+    linkedin: profile.linkedin || '',
+    portfolio: profile.portfolio || '',
     experience: profile.experience || [],
     projects: profile.projects || [],
     education: profile.education || []
@@ -297,6 +299,26 @@ export function ProfileManager() {
                   onChange={e => setFormData({...formData, location: e.target.value})}
                   className="w-full px-5 py-4 bg-canvas-light border border-hairline-light rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all text-ink placeholder:text-stone h-14"
                   placeholder="e.g. San Francisco, CA"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-mute uppercase tracking-wider mb-3">LinkedIn URL</label>
+                <input
+                  type="url"
+                  value={formData.linkedin}
+                  onChange={e => setFormData({...formData, linkedin: e.target.value})}
+                  className="w-full px-5 py-4 bg-canvas-light border border-hairline-light rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all text-ink placeholder:text-stone h-14"
+                  placeholder="https://linkedin.com/in/username"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-mute uppercase tracking-wider mb-3">Portfolio Website URL</label>
+                <input
+                  type="url"
+                  value={formData.portfolio}
+                  onChange={e => setFormData({...formData, portfolio: e.target.value})}
+                  className="w-full px-5 py-4 bg-canvas-light border border-hairline-light rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all text-ink placeholder:text-stone h-14"
+                  placeholder="https://yourwebsite.com"
                 />
               </div>
               <div>

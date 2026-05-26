@@ -44,6 +44,8 @@ const INITIAL_PROFILE: UserProfile = {
     }
   ],
   location: "San Francisco, CA",
+  linkedin: "https://linkedin.com/in/alexdev",
+  portfolio: "https://alexdev.info",
   lastUpdated: new Date().toISOString()
 };
 

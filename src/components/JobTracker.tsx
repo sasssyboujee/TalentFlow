@@ -15,7 +15,6 @@ const COLUMNS: {
   accentClass: string;
   badgeClass: string;
 }[] = [
-  { id: 'queued', label: 'Queued', theme: 'light', accentClass: 'border-t-4 border-t-stone', badgeClass: 'bg-stone/10 text-stone' },
   { id: 'ready', label: 'Ready to Apply', theme: 'dark', accentClass: 'border-t-4 border-t-primary', badgeClass: 'bg-primary/30 text-on-primary' },
   { id: 'applied', label: 'Applied', theme: 'light-alt', accentClass: 'border-t-4 border-t-accent-warning', badgeClass: 'bg-accent-warning/15 text-accent-warning' },
   { id: 'interview', label: 'Interview', theme: 'dark', accentClass: 'border-t-4 border-t-accent-teal', badgeClass: 'bg-accent-teal/30 text-on-primary' },

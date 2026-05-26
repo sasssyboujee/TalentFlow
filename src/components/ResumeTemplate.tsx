@@ -12,7 +12,7 @@ export function ResumeTemplate({ profile, app }: ResumeTemplateProps) {
       <div>
         <header className="mb-3 border-b-2 border-slate-900 pb-2 text-center">
           <h1 className="text-2xl font-bold uppercase tracking-tight text-slate-900 mb-1">{profile.name}</h1>
-          <div className="flex justify-center gap-3 text-xs text-slate-500 font-medium">
+          <div className="flex justify-center flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 font-medium max-w-2xl mx-auto">
             <span>{profile.email}</span>
             <span>•</span>
             <span>{profile.phone}</span>
@@ -20,6 +20,22 @@ export function ResumeTemplate({ profile, app }: ResumeTemplateProps) {
               <>
                 <span>•</span>
                 <span>{profile.location}</span>
+              </>
+            )}
+            {profile.linkedin && (
+              <>
+                <span>•</span>
+                <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-indigo-600 transition-colors underline-offset-2 hover:underline">
+                  {profile.linkedin.replace(/^https?:\/\/(www\.)?/, '')}
+                </a>
+              </>
+            )}
+            {profile.portfolio && (
+              <>
+                <span>•</span>
+                <a href={profile.portfolio} target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-indigo-600 transition-colors underline-offset-2 hover:underline">
+                  {profile.portfolio.replace(/^https?:\/\/(www\.)?/, '')}
+                </a>
               </>
             )}
           </div>

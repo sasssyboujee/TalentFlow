@@ -1,5 +1,4 @@
 export type ApplicationStatus = 
-  | 'queued' 
   | 'scraping' 
   | 'tailoring' 
   | 'ready' 
@@ -76,6 +75,8 @@ export interface UserProfile {
   education: Education[];
   projects?: Project[];
   location?: string;
+  linkedin?: string;
+  portfolio?: string;
   lastUpdated: string;
 }
 

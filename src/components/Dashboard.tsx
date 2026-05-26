@@ -9,7 +9,7 @@ export function Dashboard() {
     const total = applications.length;
     const applied = applications.filter(a => a.status === 'applied' || a.status === 'interview' || a.status === 'offer' || a.status === 'rejected').length;
     const interviewing = applications.filter(a => a.status === 'interview').length;
-    const active = applications.filter(a => a.status === 'queued' || a.status === 'scraping' || a.status === 'tailoring' || a.status === 'ready').length;
+    const active = applications.filter(a => a.status === 'scraping' || a.status === 'tailoring' || a.status === 'ready').length;
     
     return { total, applied, interviewing, active };
   }, [applications]);
