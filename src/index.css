@@ -2,85 +2,136 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #0066cc;
-  --color-primary-focus: #0071e3;
-  --color-primary-on-dark: #2997ff;
-  --color-ink: #1d1d1f;
-  --color-body: #1d1d1f;
+  --color-primary: #494fdf;
+  --color-primary-focus: #4f55f1;
+  --color-primary-deep: #3a40c4;
+  --color-ink: #191c1f;
+  --color-body: #1f2226;
   --color-body-on-dark: #ffffff;
   --color-body-muted: #cccccc;
   --color-ink-muted-80: #333333;
   --color-ink-muted-48: #7a7a7a;
-  --color-divider-soft: #f0f0f0;
-  --color-hairline: #e0e0e0;
+  --color-charcoal: #3a3d40;
+  --color-mute: #505a63;
+  --color-ash: #5c5e60;
+  --color-stone: #8d969e;
+  --color-faint: #c9c9cd;
+  
+  --color-canvas-light: #ffffff;
+  --color-canvas-dark: #000000;
   --color-canvas: #ffffff;
-  --color-canvas-parchment: #f5f5f7;
-  --color-surface-pearl: #fafafc;
-  --color-surface-tile-1: #272729;
-  --color-surface-tile-2: #2a2a2c;
-  --color-surface-tile-3: #252527;
-  --color-surface-black: #000000;
-  --color-surface-chip-translucent: #d2d2d7;
+  --color-canvas-parchment: #f4f4f4;
+  --color-surface-soft: #f4f4f4;
+  --color-surface-card: #ffffff;
+  --color-surface-deep: #0a0a0a;
+  --color-surface-elevated: #16181a;
+  
+  --color-hairline-light: #e2e2e7;
+  --color-hairline-dark: rgba(255, 255, 255, 0.12);
+  --color-hairline-strong: #191c1f;
+  --color-divider-soft: rgba(255, 255, 255, 0.06);
+  
+  --color-accent-teal: #00a87e;
+  --color-accent-blue-link: #376cd5;
+  --color-accent-light-blue: #007bc2;
+  --color-accent-light-green: #428619;
+  --color-accent-green-text: #006400;
+  --color-accent-yellow: #b09000;
+  --color-accent-warning: #ec7e00;
+  --color-accent-pink: #e61e49;
+  --color-accent-danger: #e23b4a;
+  --color-accent-deep-red: #8b0000;
+  --color-accent-brown: #936d62;
   --color-on-primary: #ffffff;
   --color-on-dark: #ffffff;
+  --color-on-dark-mute: rgba(255, 255, 255, 0.72);
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-
-  /* Since tailwind 4 doesn't support complex typography blocks directly in @theme, we'll create custom utilities or just rely on fonts */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Inter Display", -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
 }
 
 @utility text-hero-display {
   font-family: var(--font-display);
-  font-size: 56px;
-  font-weight: 600;
-  line-height: 1.07;
-  letter-spacing: -0.28px;
+  font-size: 136px;
+  font-weight: 500;
+  line-height: 1.0;
+  letter-spacing: -2.72px;
+}
+
+@utility text-display-xl {
+  font-family: var(--font-display);
+  font-size: 80px;
+  font-weight: 500;
+  line-height: 1.0;
+  letter-spacing: -0.8px;
 }
 
 @utility text-display-lg {
   font-family: var(--font-display);
-  font-size: 40px;
-  font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: 0;
+  font-size: 48px;
+  font-weight: 500;
+  line-height: 1.21;
+  letter-spacing: -0.48px;
 }
 
 @utility text-display-md {
-  font-family: var(--font-sans);
-  font-size: 34px;
-  font-weight: 600;
-  line-height: 1.47;
-  letter-spacing: -0.374px;
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.4px;
+}
+
+@utility text-heading-lg {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.19;
+  letter-spacing: -0.32px;
+}
+
+@utility text-heading-md {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.33;
+  letter-spacing: 0;
+}
+
+@utility text-heading-sm {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0;
 }
 
 @utility text-lead {
-  font-family: var(--font-display);
-  font-size: 28px;
+  font-family: var(--font-sans);
+  font-size: 18px;
   font-weight: 400;
-  line-height: 1.14;
-  letter-spacing: 0.196px;
+  line-height: 1.56;
+  letter-spacing: -0.09px;
 }
 
 @utility text-lead-airy {
   font-family: var(--font-sans);
-  font-size: 24px;
-  font-weight: 300;
+  font-size: 16px;
+  font-weight: 400;
   line-height: 1.5;
-  letter-spacing: 0;
+  letter-spacing: 0.24px;
 }
 
 @utility text-tagline {
   font-family: var(--font-display);
-  font-size: 21px;
-  font-weight: 600;
-  line-height: 1.19;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.4;
   letter-spacing: 0;
 }
 
 @utility shadow-product {
-  box-shadow: rgba(0, 0, 0, 0.22) 3px 5px 30px;
+  box-shadow: none;
 }
 
 @utility glass-panel {

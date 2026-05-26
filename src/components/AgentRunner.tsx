@@ -129,35 +129,37 @@ export function AgentRunner() {
   };
 
   return (
-    <div className="w-full h-full flex flex-col overflow-y-auto bg-canvas">
-      <header className="px-12 py-16 bg-canvas border-b border-divider-soft shrink-0 text-center flex flex-col items-center">
-        <h1 className="text-hero-display text-ink mb-4">Agent Runner</h1>
-        <p className="text-lead-airy text-ink-muted-48 max-w-2xl">Deploy the AI agent to scrape, tailor, and prepare your application.</p>
+    <div className="w-full h-full flex flex-col overflow-y-auto bg-canvas-light">
+      <header className="px-12 py-20 bg-canvas-light border-b border-hairline-light shrink-0 text-left max-w-7xl mx-auto w-full">
+        <h1 className="text-display-xl text-ink mb-4 font-semibold tracking-tight uppercase">Agent Runner</h1>
+        <p className="text-lead text-charcoal max-w-2xl">Deploy the AI agent to scrape, tailor, and prepare your application.</p>
       </header>
 
-      <div className="flex flex-col lg:flex-row w-full flex-1">
+      <div className="flex flex-col lg:flex-row w-full flex-1 min-h-0 border-t border-hairline-light">
         {/* Left Column: Form & Steps */}
-        <div className="flex-1 p-12 lg:border-r border-b lg:border-b-0 border-divider-soft flex flex-col gap-12 bg-canvas">
-          <div className="w-full max-w-2xl mx-auto">
-            <div className="flex gap-4 mb-8 bg-canvas-parchment p-2 rounded-2xl">
+        <div className="flex-1 p-12 lg:border-r border-b lg:border-b-0 border-hairline-light flex flex-col gap-12 bg-canvas-light text-left">
+          <div className="w-full max-w-2xl">
+            <div className="flex bg-surface-soft p-1 rounded-full mb-8 max-w-sm">
               <button
+                type="button"
                 onClick={() => setInputMode('url')}
-                className={clsx("flex-1 py-3 text-sm font-medium rounded-xl flex items-center justify-center gap-2 transition-colors", inputMode === 'url' ? "bg-canvas text-primary shadow-sm" : "text-ink-muted-48 hover:text-ink")}
+                className={clsx("flex-1 py-2 text-xs font-semibold rounded-full transition-all", inputMode === 'url' ? "bg-canvas-light text-ink shadow-sm" : "text-mute hover:text-ink bg-transparent")}
               >
-                <Link2 className="w-4 h-4" /> Scrape URL
+                <Link2 className="w-4 h-4 inline-block mr-1.5 align-text-bottom" /> Scrape URL
               </button>
               <button
+                type="button"
                 onClick={() => setInputMode('text')}
-                className={clsx("flex-1 py-3 text-sm font-medium rounded-xl flex items-center justify-center gap-2 transition-colors", inputMode === 'text' ? "bg-canvas text-primary shadow-sm" : "text-ink-muted-48 hover:text-ink")}
+                className={clsx("flex-1 py-2 text-xs font-semibold rounded-full transition-all", inputMode === 'text' ? "bg-canvas-light text-ink shadow-sm" : "text-mute hover:text-ink bg-transparent")}
               >
-                <FileText className="w-4 h-4" /> Paste JD Text
+                <FileText className="w-4 h-4 inline-block mr-1.5 align-text-bottom" /> Paste JD
               </button>
             </div>
 
             <form onSubmit={handleRunAgent}>
               {inputMode === 'url' ? (
                 <div className="mb-8">
-                  <label className="block text-sm font-medium text-ink mb-3">Target Job URL</label>
+                  <label className="block text-xs font-semibold text-mute uppercase tracking-wider mb-3">Target Job URL</label>
                   <input
                     type="url"
                     required
@@ -165,13 +167,13 @@ export function AgentRunner() {
                     value={url}
                     onChange={e => setUrl(e.target.value)}
                     disabled={isRunning}
-                    className="w-full px-5 py-4 bg-surface-pearl border border-divider-soft rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all disabled:opacity-50 text-ink placeholder:text-ink-muted-48"
+                    className="w-full px-5 py-4 bg-canvas-light border border-hairline-light rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all disabled:opacity-50 text-ink placeholder:text-stone h-14"
                   />
-                  <p className="mt-3 text-xs text-ink-muted-48">Note: Some job boards block automated scraping. If it fails, use the "Paste JD Text" option.</p>
+                  <p className="mt-3 text-xs text-mute">Note: Some job boards block automated scraping. If it fails, use the "Paste JD Text" option.</p>
                 </div>
               ) : (
                 <div className="mb-8">
-                  <label className="block text-sm font-medium text-ink mb-3">Raw Job Description</label>
+                  <label className="block text-xs font-semibold text-mute uppercase tracking-wider mb-3">Raw Job Description</label>
                   <textarea
                     required
                     rows={8}
@@ -179,14 +181,14 @@ export function AgentRunner() {
                     value={jdText}
                     onChange={e => setJdText(e.target.value)}
                     disabled={isRunning}
-                    className="w-full px-5 py-4 bg-surface-pearl border border-divider-soft rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all disabled:opacity-50 resize-none text-ink placeholder:text-ink-muted-48"
+                    className="w-full px-5 py-4 bg-canvas-light border border-hairline-light rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all disabled:opacity-50 resize-none text-ink placeholder:text-stone"
                   />
                 </div>
               )}
               <button
                 type="submit"
                 disabled={isRunning || (inputMode === 'url' ? !url : !jdText)}
-                className="w-full bg-primary hover:bg-primary-focus disabled:opacity-50 text-on-primary px-6 py-4 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-lg"
+                className="w-full bg-canvas-dark hover:bg-surface-elevated disabled:opacity-50 text-on-dark px-6 py-4 rounded-full font-semibold transition-colors flex items-center justify-center gap-2 text-base uppercase"
               >
                 {isRunning ? <Loader2 className="w-5 h-5 animate-spin" /> : <Terminal className="w-5 h-5" />}
                 {isRunning ? 'Running...' : 'Deploy Agent'}
@@ -194,30 +196,44 @@ export function AgentRunner() {
             </form>
           </div>
 
-          <div className="w-full max-w-2xl mx-auto pt-12 border-t border-divider-soft">
-            <h3 className="text-display-md text-ink mb-8">Pipeline Status</h3>
-            <div className="space-y-8 relative pl-2">
-              <div className="absolute left-6 top-4 bottom-4 w-px bg-divider-soft z-0"></div>
+          <div className="w-full max-w-2xl pt-12 border-t border-hairline-light">
+            <h3 className="text-display-md text-ink mb-10 font-semibold uppercase">Pipeline Status</h3>
+            <div className="flex items-start w-full relative">
+              {/* Connected Background Track Line */}
+              <div className="absolute left-6 right-6 top-5 h-0.5 bg-hairline-light z-0"></div>
+              {/* Connected Active Background Track Line */}
+              <div 
+                className="absolute left-6 top-5 h-0.5 bg-primary transition-all duration-500 z-0"
+                style={{ width: `${(Math.max(0, currentStep) / (steps.length - 1)) * 100 * 0.9}%` }}
+              ></div>
+
               {steps.map((step, idx) => {
                 const Icon = step.icon;
                 const status = idx < currentStep ? 'complete' : idx === currentStep && isRunning ? 'active' : 'pending';
                 
                 return (
-                  <div key={step.id} className="relative z-10 flex items-center gap-6">
+                  <div key={step.id} className="flex-1 flex flex-col items-center relative z-10">
+                    {/* Circle Node */}
                     <div className={clsx(
-                      "w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-2 transition-colors bg-canvas",
+                      "w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-2 transition-all duration-300 relative bg-canvas-light",
                       status === 'complete' ? "border-primary text-primary" :
-                      status === 'active' ? "border-primary text-primary" :
-                      "border-divider-soft text-ink-muted-48"
+                      status === 'active' ? "border-primary text-primary bg-canvas-light" :
+                      "border-hairline-light text-stone bg-canvas-light"
                     )}>
-                      {status === 'active' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}
+                      {status === 'active' && (
+                        <span className="absolute inset-0 rounded-full bg-primary/20 animate-ping z-0" />
+                      )}
+                      <span className="relative z-10">
+                        {status === 'active' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}
+                      </span>
                     </div>
-                    <div>
-                      <p className={clsx(
-                        "text-lg font-medium",
-                        status === 'pending' ? "text-ink-muted-48" : "text-ink"
-                      )}>{step.label}</p>
-                    </div>
+                    {/* Step Label */}
+                    <span className={clsx(
+                      "text-[10px] font-semibold uppercase tracking-wider mt-3 text-center px-1 font-sans block max-w-[80px]",
+                      status === 'pending' ? "text-stone" : "text-ink"
+                    )}>
+                      {step.label}
+                    </span>
                   </div>
                 );
               })}
@@ -226,25 +242,25 @@ export function AgentRunner() {
         </div>
 
         {/* Right Column: Terminal Logs (Dark Tile) */}
-        <div className="flex-1 bg-surface-tile-1 flex flex-col text-on-dark min-h-[500px]">
-          <div className="px-8 py-6 border-b border-surface-tile-3 flex items-center gap-3 shrink-0">
-            <Terminal className="w-5 h-5 text-ink-muted-48" />
-            <span className="text-sm font-mono text-ink-muted-48 tracking-widest uppercase">agent-console</span>
+        <div className="flex-1 bg-canvas-dark flex flex-col text-on-dark min-h-[500px]">
+          <div className="px-8 py-6 border-b border-hairline-dark flex items-center gap-3 shrink-0">
+            <Terminal className="w-5 h-5 text-on-dark-mute" />
+            <span className="text-sm font-mono text-on-dark-mute tracking-widest uppercase">agent-console</span>
           </div>
           <div className="p-8 flex-1 overflow-y-auto font-mono text-[13px] leading-relaxed">
             {logs.length === 0 ? (
-              <div className="text-ink-muted-48 italic">Waiting for command...</div>
+              <div className="text-on-dark-mute italic">Waiting for command...</div>
             ) : (
               <div className="space-y-4">
                 {logs.map(log => (
                   <div key={log.id} className="flex items-start gap-4">
-                    <span className="text-ink-muted-80 shrink-0 select-none">[{log.timestamp}]</span>
+                    <span className="text-ash shrink-0 select-none">[{log.timestamp}]</span>
                     <span className={clsx(
                       "break-words",
-                      log.type === 'success' ? "text-emerald-400" :
-                      log.type === 'warning' ? "text-amber-400" :
-                      log.type === 'error' ? "text-rose-400" :
-                      "text-body-muted"
+                      log.type === 'success' ? "text-accent-teal" :
+                      log.type === 'warning' ? "text-accent-warning" :
+                      log.type === 'error' ? "text-accent-danger" :
+                      "text-on-dark-mute"
                     )}>
                       {log.message}
                     </span>

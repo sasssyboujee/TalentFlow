@@ -58,6 +58,14 @@ export interface AgentLog {
   type: 'info' | 'success' | 'warning' | 'error';
 }
 
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  technologies: string[];
+  url?: string;
+}
+
 export interface UserProfile {
   name: string;
   email: string;
@@ -66,6 +74,7 @@ export interface UserProfile {
   skills: string[];
   experience: WorkExperience[];
   education: Education[];
+  projects?: Project[];
   location?: string;
   lastUpdated: string;
 }

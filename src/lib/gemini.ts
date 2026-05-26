@@ -40,6 +40,8 @@ Skills: ${profile.skills.join(', ')}
 Summary: ${profile.summary}
 Experience:
 ${profile.experience?.map(e => `- ${e.role} at ${e.company} (${e.startDate} - ${e.endDate}): ${e.description}`).join('\n')}
+Projects:
+${profile.projects?.map(p => `- ${p.name} (${p.technologies.join(', ')}): ${p.description}`).join('\n')}
 Education:
 ${profile.education?.map(edu => `- ${edu.degree} from ${edu.school} (${edu.graduationDate})`).join('\n')}
 
@@ -130,6 +132,7 @@ INSTRUCTIONS:
 3. Write a professional "summary" based on the text.
 4. Extract "experience" as an array of objects containing "company", "role", "startDate", "endDate", and "description". For description, use bullet points separated by newlines. Give each a unique ID like "exp-1", "exp-2".
 5. Extract "education" as an array of objects containing "school", "degree", and "graduationDate". Give each a unique ID like "edu-1", "edu-2".
+6. Extract "projects" as an array of objects containing "name", "description", "technologies" (as string array), and optional "url". Give each a unique ID like "proj-1", "proj-2".
 
 Output MUST be valid JSON matching this schema exactly:
 {
@@ -155,6 +158,15 @@ Output MUST be valid JSON matching this schema exactly:
       "school": "string",
       "degree": "string",
       "graduationDate": "string"
+    }
+  ],
+  "projects": [
+    {
+      "id": "string",
+      "name": "string",
+      "description": "string",
+      "technologies": ["string"],
+      "url": "string"
     }
   ]
 }
@@ -191,5 +203,95 @@ Output MUST be valid JSON matching this schema exactly:
     }
   }
   throw new Error('Failed to parse profile after multiple attempts');
+}
+
+export interface GradeReport {
+  score: number;
+  starChecklist: {
+    situation: boolean;
+    task: boolean;
+    action: boolean;
+    result: boolean;
+  };
+  feedback: string;
+  polishedAnswer: string;
+}
+
+export async function gradeInterviewAnswer(
+  question: string,
+  userAnswer: string,
+  profile: UserProfile,
+  maxRetries = 3
+): Promise<GradeReport> {
+  const prompt = `
+You are an expert technical interviewer and executive communication coach.
+Evaluate the user's mock interview answer to the specified question.
+
+QUESTION:
+${question}
+
+USER ANSWER:
+${userAnswer}
+
+USER PROFILE CONTEXT:
+Name: ${profile.name}
+Experience:
+${profile.experience?.map(e => `- ${e.role} at ${e.company}: ${e.description}`).join('\n')}
+Skills: ${profile.skills.join(', ')}
+
+INSTRUCTIONS:
+1. Score the answer from 0 to 100 based on clarity, impact, relevance, and alignment with the user's actual profile experience.
+2. Evaluate the answer against the STAR method:
+   - "situation": Did they describe the context/background? (true/false)
+   - "task": Did they clarify the challenge or goal? (true/false)
+   - "action": Did they explain what they did individually? (true/false)
+   - "result": Did they share the metric or business outcome? (true/false)
+3. Write concise "feedback" pointing out specific strengths and gaps (keep it under 100 words).
+4. Provide a "polishedAnswer" rephrasing their response to sound highly professional, punchy, and articulate, drawing from their actual experience listed in the profile (keep it under 120 words).
+
+Output MUST be valid JSON matching this schema:
+{
+  "score": number,
+  "starChecklist": {
+    "situation": boolean,
+    "task": boolean,
+    "action": boolean,
+    "result": boolean
+  },
+  "feedback": "string",
+  "polishedAnswer": "string"
+}
+`;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+        },
+      });
+
+      if (!response.text) {
+        throw new Error('No response from Gemini');
+      }
+
+      return JSON.parse(response.text) as GradeReport;
+    } catch (error: any) {
+      const errorStr = JSON.stringify(error);
+      const isRetryable = error?.status === 503 || error?.status === 429 || errorStr.includes('503') || errorStr.includes('429');
+      
+      if (attempt < maxRetries && isRetryable) {
+        console.warn(`Gemini API busy (grade attempt ${attempt}). Retrying...`);
+        await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+        continue;
+      }
+      
+      console.error('Error grading interview answer:', error);
+      throw error;
+    }
+  }
+  throw new Error('Failed to grade interview answer after multiple attempts');
 }
 

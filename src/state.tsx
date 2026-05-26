@@ -34,6 +34,15 @@ const INITIAL_PROFILE: UserProfile = {
       graduationDate: "2018-05"
     }
   ],
+  projects: [
+    {
+      id: "proj-1",
+      name: "Autonomous Job Search Agent",
+      description: "Developed an agentic workspace that scrapes JDs, matches skills via vector embeddings, and generates custom targeted resume profiles using Gemini.",
+      technologies: ["React", "TypeScript", "Vite", "Gemini API"],
+      url: "https://github.com/alexdev/autojob-agent"
+    }
+  ],
   location: "San Francisco, CA",
   lastUpdated: new Date().toISOString()
 };
@@ -96,6 +105,7 @@ interface AppStateContextType {
   setProfile: (profile: UserProfile) => void;
   applications: JobApplication[];
   addApplication: (app: JobApplication) => void;
+  deleteApplication: (id: string) => void;
   updateApplicationStatus: (id: string, status: JobApplication['status']) => void;
   updateApplicationLogs: (id: string, logs: AgentLog[], incremental?: boolean) => void;
   updateApplicationDetails: (id: string, updates: Partial<JobApplication>) => void;
@@ -110,15 +120,26 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfileState] = useState<UserProfile>(() => {
     try {
       const saved = localStorage.getItem('agent_profile');
-      return saved ? JSON.parse(saved) : INITIAL_PROFILE;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          ...parsed,
+          projects: parsed.projects || []
+        };
+      }
+      return INITIAL_PROFILE;
     } catch {
       return INITIAL_PROFILE;
     }
   });
 
   const setProfile = (newProfile: UserProfile) => {
-    setProfileState(newProfile);
-    localStorage.setItem('agent_profile', JSON.stringify(newProfile));
+    const sanitized = {
+      ...newProfile,
+      projects: newProfile.projects || []
+    };
+    setProfileState(sanitized);
+    localStorage.setItem('agent_profile', JSON.stringify(sanitized));
   };
 
   // Persist Applications
@@ -138,6 +159,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   const addApplication = (app: JobApplication) => {
     saveApplications([app, ...applications]);
+  };
+
+  const deleteApplication = (id: string) => {
+    saveApplications(applications.filter(app => app.id !== id));
   };
 
   const updateApplicationStatus = (id: string, status: JobApplication['status']) => {
@@ -170,7 +195,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     <AppStateContext.Provider value={{
       view, setView,
       profile, setProfile,
-      applications, addApplication, updateApplicationStatus, updateApplicationLogs, updateApplicationDetails
+      applications, addApplication, deleteApplication, updateApplicationStatus, updateApplicationLogs, updateApplicationDetails
     }}>
       {children}
     </AppStateContext.Provider>
