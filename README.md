@@ -1,5 +1,4 @@
 <div align="center">
-  <img width="1200" height="400" alt="TalentFlow Header Banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" style="border-radius: 16px; object-fit: cover;" />
 
   # TalentFlow AI Career Suite
 
