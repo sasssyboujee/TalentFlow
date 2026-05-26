@@ -1,0 +1,1 @@
+{"name":"AutoJob Agent","description":"Agentic auto job applier that tailors resumes and tracks application statuses.","requestFramePermissions":[],"majorCapabilities":["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]}
