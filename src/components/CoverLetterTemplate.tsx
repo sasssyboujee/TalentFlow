@@ -29,7 +29,7 @@ export function CoverLetterTemplate({ profile, app }: CoverLetterTemplateProps) 
             <span>•</span>
             <span>{profile.phone}</span>
             <span>•</span>
-            <span>San Francisco, CA</span>
+            <span>{profile.location || 'San Francisco, CA'}</span>
           </div>
         </header>
 

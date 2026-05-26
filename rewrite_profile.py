@@ -1,140 +1,9 @@
-import React, { useState } from 'react';
-import { useAppState } from '../state';
-import { Save, AlertCircle, Plus, Trash2, Link2, FileText, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
-import { parseProfileData } from '../lib/gemini';
-import clsx from 'clsx';
-import type { WorkExperience, Education } from '../types';
+import re
 
-export function ProfileManager() {
-  const { profile, setProfile } = useAppState();
-  
-  const [formData, setFormData] = useState({
-    ...profile,
-    location: profile.location || 'San Francisco, CA',
-    experience: profile.experience || [],
-    education: profile.education || []
-  });
-  const [skillsString, setSkillsString] = useState(profile.skills.join(', '));
-  const [saved, setSaved] = useState(false);
+with open("src/components/ProfileManager.tsx", "r") as f:
+    content = f.read()
 
-  // Auto-Import State
-  const [importMode, setImportMode] = useState<'url' | 'text'>('text');
-  const [importUrl, setImportUrl] = useState('');
-  const [importText, setImportText] = useState('');
-  const [isImporting, setIsImporting] = useState(false);
-  const [importError, setImportError] = useState('');
-
-  const handleAutoImport = async () => {
-    if (importMode === 'url' && !importUrl) return;
-    if (importMode === 'text' && !importText) return;
-
-    setIsImporting(true);
-    setImportError('');
-    try {
-      let text = importText;
-      if (importMode === 'url') {
-        const res = await fetch(`/api/scrape?url=${encodeURIComponent(importUrl)}`);
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-        text = data.text;
-      }
-      if (!text) throw new Error('No text found to parse');
-
-      const parsedData = await parseProfileData(text);
-      
-      setFormData(prev => ({
-        ...prev,
-        name: parsedData.name || prev.name,
-        email: parsedData.email || prev.email,
-        phone: parsedData.phone || prev.phone,
-        location: parsedData.location || prev.location,
-        summary: parsedData.summary || prev.summary,
-        experience: parsedData.experience || prev.experience,
-        education: parsedData.education || prev.education,
-      }));
-      if (parsedData.skills) {
-        setSkillsString(parsedData.skills.join(', '));
-      }
-      
-      setImportText('');
-      setImportUrl('');
-    } catch (err: any) {
-      setImportError(err.message || 'Failed to auto-import');
-    } finally {
-      setIsImporting(false);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setProfile({
-      ...formData,
-      skills: skillsString.split(',').map(s => s.trim()).filter(Boolean),
-      lastUpdated: new Date().toISOString()
-    });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
-  };
-
-  // Experience Handlers
-  const handleAddExperience = () => {
-    const newExp: WorkExperience = {
-      id: `exp-${Date.now()}`,
-      company: '',
-      role: '',
-      startDate: '',
-      endDate: '',
-      description: ''
-    };
-    setFormData({
-      ...formData,
-      experience: [...formData.experience, newExp]
-    });
-  };
-
-  const handleRemoveExperience = (id: string) => {
-    setFormData({
-      ...formData,
-      experience: formData.experience.filter(exp => exp.id !== id)
-    });
-  };
-
-  const handleUpdateExperience = (id: string, field: keyof WorkExperience, value: string) => {
-    setFormData({
-      ...formData,
-      experience: formData.experience.map(exp => exp.id === id ? { ...exp, [field]: value } : exp)
-    });
-  };
-
-  // Education Handlers
-  const handleAddEducation = () => {
-    const newEdu: Education = {
-      id: `edu-${Date.now()}`,
-      school: '',
-      degree: '',
-      graduationDate: ''
-    };
-    setFormData({
-      ...formData,
-      education: [...formData.education, newEdu]
-    });
-  };
-
-  const handleRemoveEducation = (id: string) => {
-    setFormData({
-      ...formData,
-      education: formData.education.filter(edu => edu.id !== id)
-    });
-  };
-
-  const handleUpdateEducation = (id: string, field: keyof Education, value: string) => {
-    setFormData({
-      ...formData,
-      education: formData.education.map(edu => edu.id === id ? { ...edu, [field]: value } : edu)
-    });
-  };
-
-  return (
+profile_new = """  return (
     <div className="w-full h-full flex flex-col overflow-y-auto bg-canvas">
       <header className="px-12 py-16 bg-canvas border-b border-divider-soft shrink-0 text-center flex flex-col items-center">
         <h1 className="text-hero-display text-ink mb-4">Structured Profile</h1>
@@ -143,78 +12,6 @@ export function ProfileManager() {
 
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col max-w-5xl mx-auto w-full text-left">
         <div className="p-12 space-y-16">
-          {/* AI Auto-Import Section */}
-          <section className="bg-canvas-parchment p-8 rounded-3xl border border-divider-soft">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0">
-                <Sparkles className="w-5 h-5 text-on-primary" />
-              </div>
-              <div>
-                <h3 className="text-display-md text-ink">AI Profile Auto-Fill</h3>
-                <p className="text-sm text-ink-muted-48 mt-1">Paste your resume text or a LinkedIn URL to auto-fill the fields below.</p>
-              </div>
-            </div>
-
-            <div className="flex gap-4 mb-6 bg-canvas p-2 rounded-2xl w-full max-w-sm">
-              <button
-                type="button"
-                onClick={() => setImportMode('text')}
-                className={clsx("flex-1 py-3 text-sm font-medium rounded-xl flex items-center justify-center gap-2 transition-colors", importMode === 'text' ? "bg-canvas-parchment text-primary shadow-sm" : "text-ink-muted-48 hover:text-ink")}
-              >
-                <FileText className="w-4 h-4" /> Paste Text
-              </button>
-              <button
-                type="button"
-                onClick={() => setImportMode('url')}
-                className={clsx("flex-1 py-3 text-sm font-medium rounded-xl flex items-center justify-center gap-2 transition-colors", importMode === 'url' ? "bg-canvas-parchment text-primary shadow-sm" : "text-ink-muted-48 hover:text-ink")}
-              >
-                <Link2 className="w-4 h-4" /> Scrape URL
-              </button>
-            </div>
-
-            <div className="mb-6">
-              {importMode === 'url' ? (
-                <div>
-                  <input
-                    type="url"
-                    placeholder="https://linkedin.com/in/..."
-                    value={importUrl}
-                    onChange={e => setImportUrl(e.target.value)}
-                    disabled={isImporting}
-                    className="w-full px-5 py-4 bg-canvas border-none rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all text-ink placeholder:text-ink-muted-48"
-                  />
-                  <p className="mt-3 text-xs text-ink-muted-48">Note: LinkedIn may block automated scraping. If it fails, copy and paste the text instead.</p>
-                </div>
-              ) : (
-                <textarea
-                  rows={4}
-                  placeholder="Paste the full text of your resume here..."
-                  value={importText}
-                  onChange={e => setImportText(e.target.value)}
-                  disabled={isImporting}
-                  className="w-full px-5 py-4 bg-canvas border-none rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all resize-none text-ink placeholder:text-ink-muted-48"
-                />
-              )}
-            </div>
-
-            {importError && (
-              <div className="mb-6 p-4 bg-rose-50 text-rose-600 rounded-xl flex gap-3 text-sm items-center border border-rose-100">
-                <AlertTriangle className="w-5 h-5 shrink-0" />
-                <p>{importError}</p>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={handleAutoImport}
-              disabled={isImporting || (importMode === 'url' ? !importUrl : !importText)}
-              className="bg-primary hover:bg-primary-focus disabled:opacity-50 text-on-primary px-8 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 w-full md:w-auto"
-            >
-              {isImporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
-              {isImporting ? 'Parsing with AI...' : 'Auto-Fill Profile'}
-            </button>
-          </section>
-
           {/* Basic Info */}
           <section>
             <h3 className="text-display-md text-ink mb-8">Basic Information</h3>
@@ -247,17 +44,6 @@ export function ProfileManager() {
                   value={formData.phone}
                   onChange={e => setFormData({...formData, phone: e.target.value})}
                   className="w-full px-5 py-4 bg-surface-pearl border-none rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all text-ink placeholder:text-ink-muted-48"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-ink-muted-48 uppercase tracking-widest mb-3">Location</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.location}
-                  onChange={e => setFormData({...formData, location: e.target.value})}
-                  className="w-full px-5 py-4 bg-surface-pearl border-none rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all text-ink placeholder:text-ink-muted-48"
-                  placeholder="e.g. San Francisco, CA"
                 />
               </div>
               <div>
@@ -466,5 +252,14 @@ export function ProfileManager() {
       </form>
     </div>
   );
-}
+}"""
 
+content = re.sub(
+    r"  return \(\n    <div className=\"p-8 max-w-4xl mx-auto\">.*?\n    </div>\n  \);\n\}",
+    profile_new,
+    content,
+    flags=re.DOTALL
+)
+
+with open("src/components/ProfileManager.tsx", "w") as f:
+    f.write(content)

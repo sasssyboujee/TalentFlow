@@ -66,6 +66,7 @@ export interface UserProfile {
   skills: string[];
   experience: WorkExperience[];
   education: Education[];
+  location?: string;
   lastUpdated: string;
 }
 

@@ -8,26 +8,26 @@ interface ResumeTemplateProps {
 
 export function ResumeTemplate({ profile, app }: ResumeTemplateProps) {
   return (
-    <div id="resume-template" className="w-[816px] h-[1056px] bg-white p-12 text-slate-900 font-sans mx-auto box-border relative">
-      <header className="mb-8 border-b-2 border-slate-900 pb-6 text-center">
+    <div id="resume-template" className="w-[816px] h-[1056px] bg-white p-8 text-slate-900 font-sans mx-auto box-border relative">
+      <header className="mb-4 border-b-2 border-slate-900 pb-3 text-center">
         <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-900 mb-2">{profile.name}</h1>
         <div className="flex justify-center gap-4 text-sm text-slate-600 font-medium">
           <span>{profile.email}</span>
           <span>•</span>
           <span>{profile.phone}</span>
           <span>•</span>
-          <span>San Francisco, CA</span>
+          <span>{profile.location || 'San Francisco, CA'}</span>
         </div>
       </header>
 
-      <section className="mb-8">
+      <section className="mb-5">
         <h2 className="text-xl font-bold uppercase tracking-wider text-slate-900 mb-3 border-b border-slate-300 pb-1">Professional Summary</h2>
         <div className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
           {app.tailoredResumeSnippet || profile.summary}
         </div>
       </section>
 
-      <section className="mb-8">
+      <section className="mb-5">
         <h2 className="text-xl font-bold uppercase tracking-wider text-slate-900 mb-3 border-b border-slate-300 pb-1">Technical Skills</h2>
         <div className="flex flex-wrap gap-2">
           {profile.skills.map((skill, i) => (
@@ -38,17 +38,17 @@ export function ResumeTemplate({ profile, app }: ResumeTemplateProps) {
         </div>
       </section>
 
-      <section className="mb-8">
+      <section className="mb-5">
         <h2 className="text-xl font-bold uppercase tracking-wider text-slate-900 mb-3 border-b border-slate-300 pb-1">Experience</h2>
         {profile.experience && profile.experience.length > 0 ? (
           profile.experience.map((exp) => (
-            <div key={exp.id} className="mb-6 last:mb-0">
+            <div key={exp.id} className="mb-4 last:mb-0">
               <div className="flex justify-between items-baseline mb-1">
                 <h3 className="text-lg font-bold text-slate-800">{exp.role}</h3>
                 <span className="text-sm font-semibold text-slate-600">{exp.startDate} - {exp.endDate}</span>
               </div>
               <div className="text-md font-medium text-slate-700 mb-2 italic">{exp.company}</div>
-              <ul className="list-disc list-outside ml-5 text-sm text-slate-700 space-y-1.5">
+              <ul className="list-disc list-outside ml-5 text-sm text-slate-700 space-y-0.5">
                 {exp.description.split('\n').filter(Boolean).map((bullet, idx) => (
                   <li key={idx}>{bullet.replace(/^- /, '')}</li>
                 ))}

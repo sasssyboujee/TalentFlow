@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useAppState } from '../state';
 import { ExternalLink, MoreVertical, ChevronDown, ChevronUp, FileDown, Loader2, X, Target, Sparkles, HelpCircle, Briefcase, Award } from 'lucide-react';
 import type { JobApplication, ApplicationStatus, UserProfile, InterviewQuestion } from '../types';
-import { createRoot } from 'react-dom/client';
-import html2pdf from 'html2pdf.js';
+import { createPortal } from 'react-dom';
 import { ResumeTemplate } from './ResumeTemplate';
 import { CoverLetterTemplate } from './CoverLetterTemplate';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
@@ -170,6 +169,8 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
   const [isGeneratingResume, setIsGeneratingResume] = useState(false);
   const [isGeneratingCover, setIsGeneratingCover] = useState(false);
   const [expandedQuestion, setExpandedQuestion] = useState<number | null>(null);
+  const [printingType, setPrintingType] = useState<'resume' | 'cover' | null>(null);
+  const [printProgress, setPrintProgress] = useState(0);
 
   // Fallback radar chart scores if the job was scanned before updating the Gemini schema
   const skillCategories = app.skillCategories || [
@@ -182,68 +183,52 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
 
   const handleDownloadResume = () => {
     setIsGeneratingResume(true);
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    document.body.appendChild(container);
+    setPrintProgress(0);
+    setPrintingType('resume');
 
-    const root = createRoot(container);
-    root.render(<ResumeTemplate app={app} profile={profile} />);
+    const duration = 1500;
+    const intervalTime = 50;
+    const steps = duration / intervalTime;
+    let currentStep = 0;
 
-    setTimeout(() => {
-      const element = container.querySelector('#resume-template') as HTMLElement;
-      if (element) {
-        const opt: any = {
-          margin:       0,
-          filename:     `${app.company.replace(/[^a-z0-9]/gi, '_')}_Tailored_Resume.pdf`,
-          image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2, useCORS: true },
-          jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-        };
-        html2pdf().set(opt).from(element).save().then(() => {
-          root.unmount();
-          document.body.removeChild(container);
+    const timer = setInterval(() => {
+      currentStep++;
+      setPrintProgress(Math.min(100, Math.round((currentStep / steps) * 100)));
+
+      if (currentStep >= steps) {
+        clearInterval(timer);
+        setTimeout(() => {
+          window.print();
           setIsGeneratingResume(false);
-        }).catch(() => {
-          setIsGeneratingResume(false);
-        });
-      } else {
-        setIsGeneratingResume(false);
+          setPrintingType(null);
+        }, 300);
       }
-    }, 500);
+    }, intervalTime);
   };
 
   const handleDownloadCoverLetter = () => {
     setIsGeneratingCover(true);
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    document.body.appendChild(container);
+    setPrintProgress(0);
+    setPrintingType('cover');
 
-    const root = createRoot(container);
-    root.render(<CoverLetterTemplate app={app} profile={profile} />);
+    const duration = 1500;
+    const intervalTime = 50;
+    const steps = duration / intervalTime;
+    let currentStep = 0;
 
-    setTimeout(() => {
-      const element = container.querySelector('#cover-letter-template') as HTMLElement;
-      if (element) {
-        const opt: any = {
-          margin:       0,
-          filename:     `${app.company.replace(/[^a-z0-9]/gi, '_')}_Cover_Letter.pdf`,
-          image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2, useCORS: true },
-          jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-        };
-        html2pdf().set(opt).from(element).save().then(() => {
-          root.unmount();
-          document.body.removeChild(container);
+    const timer = setInterval(() => {
+      currentStep++;
+      setPrintProgress(Math.min(100, Math.round((currentStep / steps) * 100)));
+
+      if (currentStep >= steps) {
+        clearInterval(timer);
+        setTimeout(() => {
+          window.print();
           setIsGeneratingCover(false);
-        }).catch(() => {
-          setIsGeneratingCover(false);
-        });
-      } else {
-        setIsGeneratingCover(false);
+          setPrintingType(null);
+        }, 300);
       }
-    }, 500);
+    }, intervalTime);
   };
 
   return (
@@ -495,6 +480,39 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
           </section>
         </div>
       </div>
+
+      {printingType === 'resume' && createPortal(
+        <div id="print-portal">
+          <ResumeTemplate app={app} profile={profile} />
+        </div>,
+        document.body
+      )}
+
+      {printingType === 'cover' && createPortal(
+        <div id="print-portal">
+          <CoverLetterTemplate app={app} profile={profile} />
+        </div>,
+        document.body
+      )}
+
+      {(isGeneratingResume || isGeneratingCover) && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-canvas-parchment/80 backdrop-blur-md print:hidden">
+          <div className="w-80 p-8 bg-canvas border border-divider-soft rounded-3xl shadow-product text-center">
+            <h4 className="text-tagline text-ink mb-4 font-semibold">
+              Preparing ATS-Compliant PDF
+            </h4>
+            <div className="h-2 bg-divider-soft rounded-full overflow-hidden mb-3">
+              <div 
+                className="h-full bg-primary transition-all duration-75"
+                style={{ width: `${printProgress}%` }}
+              />
+            </div>
+            <p className="text-sm text-ink-muted-48">
+              Formatting content for printer output ({printProgress}%)
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -34,6 +34,7 @@ const INITIAL_PROFILE: UserProfile = {
       graduationDate: "2018-05"
     }
   ],
+  location: "San Francisco, CA",
   lastUpdated: new Date().toISOString()
 };
 
