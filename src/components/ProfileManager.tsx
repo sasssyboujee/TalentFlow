@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppState } from '../state';
-import { Save, AlertCircle, Plus, Trash2, Link2, FileText, Loader2, Sparkles, AlertTriangle, Download } from 'lucide-react';
+import { Save, AlertCircle, Plus, Trash2, FileText, Loader2, Sparkles, AlertTriangle, Download, Upload, File, X } from 'lucide-react';
 import { parseProfileData } from '../lib/gemini';
 import clsx from 'clsx';
 import type { WorkExperience, Education } from '../types';
@@ -53,25 +53,49 @@ export function ProfileManager() {
   };
 
   // Auto-Import State
-  const [importMode, setImportMode] = useState<'url' | 'text'>('text');
-  const [importUrl, setImportUrl] = useState('');
+  const [importMode, setImportMode] = useState<'pdf' | 'text'>('text');
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [importText, setImportText] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState('');
 
+  const extractTextFromPdf = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer();
+    
+    // Dynamically load PDF.js from cdnjs
+    const pdfjsUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.136/pdf.min.mjs';
+    const pdfjs = await import(/* @vite-ignore */ pdfjsUrl);
+    pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.136/pdf.worker.min.mjs';
+
+    const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+    
+    let fullText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map((item: any) => item.str).join(' ');
+      fullText += pageText + '\n';
+    }
+    
+    const trimmed = fullText.trim();
+    if (!trimmed) {
+      throw new Error('No text content could be extracted from this PDF. It might be scanned (an image) or empty.');
+    }
+    return trimmed;
+  };
+
   const handleAutoImport = async (merge: boolean = false) => {
-    if (importMode === 'url' && !importUrl) return;
+    if (importMode === 'pdf' && !pdfFile) return;
     if (importMode === 'text' && !importText) return;
 
     setIsImporting(true);
     setImportError('');
     try {
       let text = importText;
-      if (importMode === 'url') {
-        const res = await fetch(`/api/scrape?url=${encodeURIComponent(importUrl)}`);
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-        text = data.text;
+      if (importMode === 'pdf') {
+        if (!pdfFile) throw new Error('No PDF file selected');
+        text = await extractTextFromPdf(pdfFile);
       }
       if (!text) throw new Error('No text found to parse');
 
@@ -102,9 +126,13 @@ export function ProfileManager() {
       }
       
       setImportText('');
-      setImportUrl('');
+      setPdfFile(null);
     } catch (err: any) {
-      setImportError(err.message || 'Failed to auto-import');
+      let friendlyMessage = err.message || 'Failed to auto-import';
+      if (err.message && err.message.includes('Failed to fetch dynamically imported module')) {
+        friendlyMessage = 'Could not load the PDF reader helper. Please check your internet connection or use the "Paste Text" tab as a fallback.';
+      }
+      setImportError(friendlyMessage);
     } finally {
       setIsImporting(false);
     }
@@ -233,7 +261,7 @@ export function ProfileManager() {
               </div>
               <div>
                 <h3 className="text-heading-lg text-ink font-semibold uppercase">AI Profile Auto-Fill</h3>
-                <p className="text-sm text-mute mt-1">Paste your resume text or a LinkedIn URL to auto-fill the fields below.</p>
+                <p className="text-sm text-mute mt-1">Paste your resume text or upload a PDF to auto-fill the fields below.</p>
               </div>
             </div>
 
@@ -247,25 +275,84 @@ export function ProfileManager() {
               </button>
               <button
                 type="button"
-                onClick={() => setImportMode('url')}
-                className={clsx("flex-1 py-2 text-xs font-semibold rounded-full transition-all", importMode === 'url' ? "bg-canvas-light text-ink shadow-sm" : "text-mute hover:text-ink bg-transparent")}
+                onClick={() => setImportMode('pdf')}
+                className={clsx("flex-1 py-2 text-xs font-semibold rounded-full transition-all", importMode === 'pdf' ? "bg-canvas-light text-ink shadow-sm" : "text-mute hover:text-ink bg-transparent")}
               >
-                <Link2 className="w-4 h-4 inline-block mr-1.5 align-text-bottom" /> Scrape URL
+                <Upload className="w-4 h-4 inline-block mr-1.5 align-text-bottom" /> Upload PDF
               </button>
             </div>
 
             <div className="mb-6">
-              {importMode === 'url' ? (
-                <div>
-                  <input
-                    type="url"
-                    placeholder="https://linkedin.com/in/..."
-                    value={importUrl}
-                    onChange={e => setImportUrl(e.target.value)}
-                    disabled={isImporting}
-                    className="w-full px-5 py-4 bg-canvas-light border border-hairline-light rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all text-ink placeholder:text-stone h-14"
-                  />
-                  <p className="mt-3 text-xs text-mute">Note: LinkedIn may block automated scraping. If it fails, copy and paste the text instead.</p>
+              {importMode === 'pdf' ? (
+                <div className="space-y-4">
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const file = e.dataTransfer.files?.[0];
+                      if (file && file.type === 'application/pdf') {
+                        setPdfFile(file);
+                        setImportError('');
+                      } else if (file) {
+                        setImportError('Please select a valid PDF file.');
+                      }
+                    }}
+                    className={clsx(
+                      "border-2 border-dashed border-hairline-light rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-canvas-light text-center relative min-h-36",
+                      pdfFile ? "bg-canvas-light border-primary/40" : "bg-transparent"
+                    )}
+                  >
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setPdfFile(file);
+                          setImportError('');
+                        }
+                      }}
+                      disabled={isImporting}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                    
+                    {pdfFile ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                          <File className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-ink truncate max-w-xs">{pdfFile.name}</p>
+                          <p className="text-xs text-mute mt-0.5">{(pdfFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-12 h-12 rounded-full bg-surface-soft flex items-center justify-center text-mute">
+                          <Upload className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-ink">Drag & drop your PDF resume here</p>
+                          <p className="text-xs text-mute mt-0.5">or click to browse from your device</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {pdfFile && (
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setPdfFile(null)}
+                        className="text-xs font-semibold text-rose-500 hover:text-rose-600 transition-colors flex items-center gap-1.5 bg-transparent border-none outline-none cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" /> Remove file
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <textarea
@@ -290,7 +377,7 @@ export function ProfileManager() {
               <button
                 type="button"
                 onClick={() => handleAutoImport(false)}
-                disabled={isImporting || (importMode === 'url' ? !importUrl : !importText)}
+                disabled={isImporting || (importMode === 'pdf' ? !pdfFile : !importText)}
                 className="bg-canvas-dark hover:bg-surface-elevated disabled:opacity-50 text-on-dark px-8 py-3.5 rounded-full font-semibold transition-all flex items-center justify-center gap-2 flex-1 uppercase text-xs"
               >
                 {isImporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
@@ -299,7 +386,7 @@ export function ProfileManager() {
               <button
                 type="button"
                 onClick={() => handleAutoImport(true)}
-                disabled={isImporting || (importMode === 'url' ? !importUrl : !importText)}
+                disabled={isImporting || (importMode === 'pdf' ? !pdfFile : !importText)}
                 className="bg-surface-soft hover:bg-faint border border-hairline-light disabled:opacity-50 text-ink px-8 py-3.5 rounded-full font-semibold transition-all flex items-center justify-center gap-2 flex-1 uppercase text-xs"
               >
                 {isImporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
