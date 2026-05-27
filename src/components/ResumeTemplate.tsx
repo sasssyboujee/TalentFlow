@@ -1,18 +1,44 @@
 import React from 'react';
 import type { UserProfile, JobApplication } from '../types';
+import { useAppState } from '../state';
 
 interface ResumeTemplateProps {
   profile: UserProfile;
-  app: JobApplication;
+  app?: JobApplication;
 }
 
 export function ResumeTemplate({ profile, app }: ResumeTemplateProps) {
+  const { settings } = useAppState();
+
+  const displayProjects = app?.relevantProjectIds && app.relevantProjectIds.length > 0
+    ? profile.projects.filter(p => app.relevantProjectIds!.includes(p.id))
+    : profile.projects.slice(0, 2);
+
+  // Map settings to actual CSS values/classes
+  const fontFamilyMap: Record<string, string> = {
+    inter: 'Inter, sans-serif',
+    roboto: 'Roboto, sans-serif',
+    garamond: 'Garamond, serif',
+    mono: 'monospace'
+  };
+
+  const themeColors: Record<string, { bg: string, text: string, accent: string, textMute: string, border: string }> = {
+    classic: { bg: 'bg-white', text: 'text-slate-900', accent: 'text-indigo-700', textMute: 'text-slate-500', border: 'border-slate-300' },
+    modern: { bg: 'bg-[#f8fafc]', text: 'text-gray-900', accent: 'text-blue-600', textMute: 'text-gray-500', border: 'border-blue-200' },
+    minimal: { bg: 'bg-white', text: 'text-black', accent: 'text-black', textMute: 'text-gray-400', border: 'border-gray-200' },
+  };
+
+  const colors = themeColors[settings.resumeTheme] || themeColors.classic;
+
   return (
-    <div id="resume-template" className="w-[816px] h-[1056px] bg-white p-8 text-slate-900 font-sans mx-auto box-border relative overflow-hidden flex flex-col justify-between">
+    <div id="resume-template" 
+      className={`w-[816px] h-[1056px] ${colors.bg} p-8 ${colors.text} mx-auto box-border relative overflow-hidden flex flex-col justify-between`}
+      style={{ fontFamily: fontFamilyMap[settings.resumeFont] || 'sans-serif' }}
+    >
       <div>
-        <header className="mb-3 border-b-2 border-slate-900 pb-2 text-center">
-          <h1 className="text-2xl font-bold uppercase tracking-tight text-slate-900 mb-1">{profile.name}</h1>
-          <div className="flex justify-center flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 font-medium max-w-2xl mx-auto">
+        <header className={`mb-3 border-b-2 ${colors.border} pb-2 text-center`}>
+          <h1 className={`text-2xl font-bold uppercase tracking-tight ${colors.text} mb-1`}>{profile.name}</h1>
+          <div className={`flex justify-center flex-wrap gap-x-3 gap-y-1 text-xs ${colors.textMute} font-medium max-w-2xl mx-auto`}>
             <span>{profile.email}</span>
             <span>•</span>
             <span>{profile.phone}</span>
@@ -42,14 +68,14 @@ export function ResumeTemplate({ profile, app }: ResumeTemplateProps) {
         </header>
 
         <section className="mb-4">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-1.5 border-b border-slate-300 pb-0.5">Professional Summary</h2>
+          <h2 className={`text-xs font-bold uppercase tracking-wider ${colors.text} mb-1.5 border-b ${colors.border} pb-0.5`}>Professional Summary</h2>
           <div className="text-[10.5px] leading-relaxed text-slate-700 whitespace-pre-wrap">
-            {app.tailoredResumeSnippet || profile.summary}
+            {app?.tailoredResumeSnippet || profile.summary}
           </div>
         </section>
 
         <section className="mb-4">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-1.5 border-b border-slate-300 pb-0.5">Technical Skills</h2>
+          <h2 className={`text-xs font-bold uppercase tracking-wider ${colors.text} mb-1.5 border-b ${colors.border} pb-0.5`}>Technical Skills</h2>
           <div className="flex flex-wrap gap-1.5">
             {profile.skills.map((skill, i) => (
               <span key={i} className="text-[9.5px] bg-slate-50 px-2 py-0.5 text-slate-800 rounded font-medium border border-slate-200">
@@ -60,7 +86,7 @@ export function ResumeTemplate({ profile, app }: ResumeTemplateProps) {
         </section>
 
         <section className="mb-4">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-1.5 border-b border-slate-300 pb-0.5">Experience</h2>
+          <h2 className={`text-xs font-bold uppercase tracking-wider ${colors.text} mb-1.5 border-b ${colors.border} pb-0.5`}>Experience</h2>
           {profile.experience && profile.experience.length > 0 ? (
             profile.experience.map((exp) => (
               <div key={exp.id} className="mb-3 last:mb-0">
@@ -82,9 +108,9 @@ export function ResumeTemplate({ profile, app }: ResumeTemplateProps) {
         </section>
 
         <section className="mb-4">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-1.5 border-b border-slate-300 pb-0.5">Projects</h2>
-          {profile.projects && profile.projects.length > 0 ? (
-            profile.projects.slice(0, 2).map((proj) => (
+          <h2 className={`text-xs font-bold uppercase tracking-wider ${colors.text} mb-1.5 border-b ${colors.border} pb-0.5`}>Projects</h2>
+          {displayProjects.length > 0 ? (
+            displayProjects.map((proj) => (
               <div key={proj.id} className="mb-2.5 last:mb-0">
                 <div className="flex justify-between items-baseline">
                   <div className="flex items-center gap-1.5">
@@ -108,7 +134,7 @@ export function ResumeTemplate({ profile, app }: ResumeTemplateProps) {
         </section>
 
         <section className="mb-4">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-1.5 border-b border-slate-300 pb-0.5">Education</h2>
+          <h2 className={`text-xs font-bold uppercase tracking-wider ${colors.text} mb-1.5 border-b ${colors.border} pb-0.5`}>Education</h2>
           {profile.education && profile.education.length > 0 ? (
             profile.education.map((edu) => (
               <div key={edu.id} className="mb-2 last:mb-0">

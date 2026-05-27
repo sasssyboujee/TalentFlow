@@ -1,5 +1,6 @@
 import React from 'react';
 import type { UserProfile, JobApplication } from '../types';
+import { useAppState } from '../state';
 
 interface CoverLetterTemplateProps {
   profile: UserProfile;
@@ -7,11 +8,20 @@ interface CoverLetterTemplateProps {
 }
 
 export function CoverLetterTemplate({ profile, app }: CoverLetterTemplateProps) {
+  const { settings } = useAppState();
+  
   const today = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
+
+  const fontFamilyMap: Record<string, string> = {
+    inter: 'Inter, sans-serif',
+    roboto: 'Roboto, sans-serif',
+    garamond: 'Garamond, serif',
+    mono: 'monospace'
+  };
 
   // Strip common markdown characters from cover letter body to make it look clean for print
   const cleanCoverLetter = (app.tailoredCoverLetter || '')
@@ -20,7 +30,10 @@ export function CoverLetterTemplate({ profile, app }: CoverLetterTemplateProps) 
     .replace(/#/g, '');
 
   return (
-    <div id="cover-letter-template" className="w-[816px] h-[1056px] bg-white p-16 text-slate-900 font-serif mx-auto box-border relative text-left flex flex-col justify-between">
+    <div id="cover-letter-template" 
+      className="w-[816px] h-[1056px] bg-white p-16 text-slate-900 mx-auto box-border relative text-left flex flex-col justify-between"
+      style={{ fontFamily: fontFamilyMap[settings.resumeFont] || 'sans-serif' }}
+    >
       <div>
         <header className="mb-10 border-b border-slate-200 pb-6 font-sans">
           <h1 className="text-3xl font-bold uppercase tracking-tight text-slate-900 mb-1">{profile.name}</h1>
@@ -45,7 +58,7 @@ export function CoverLetterTemplate({ profile, app }: CoverLetterTemplateProps) 
             <p className="font-semibold text-indigo-600">{app.company}</p>
           </div>
 
-          <div className="leading-relaxed whitespace-pre-wrap text-[14px] text-slate-800 font-serif space-y-4">
+          <div className="leading-relaxed whitespace-pre-wrap text-[14px] text-slate-800 space-y-4">
             {cleanCoverLetter || `Dear Hiring Team,\n\nI am writing to express my strong interest in the ${app.role} position at ${app.company}. Based on my background and skills, I am confident I would be a valuable addition to your team.\n\nSincerely,\n\n${profile.name}`}
           </div>
         </div>

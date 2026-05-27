@@ -40,6 +40,7 @@ export interface JobMatchAnalysis {
   missingKeywords: string[];
   tailoredResumeSnippet: string;
   tailoredCoverLetter: string;
+  relevantProjectIds: string[];
   interviewPrep: { question: string; answer: string }[];
   skillCategories: { category: string; userScore: number; jobDemandScore: number }[];
 }
@@ -89,8 +90,9 @@ INSTRUCTIONS:
 3. Identify "matchingKeywords" (skills the user has that the job requires) and "missingKeywords" (skills the job requires that the user is missing).
 4. Generate a "tailoredResumeSnippet". This is a professional summary written in the first person that highlights the user's matching skills and aligns their experience with the job description. ${resumeSnippetConstraint} Format using Markdown.
 5. Generate a "tailoredCoverLetter". This is a full, professional cover letter (3-4 paragraphs, roughly 250-350 words) written in the first person. Include headers (sender info, placeholder date, addressing the hiring team), introduce the role, highlight 1-2 major matching achievements from the user's experience that directly address the JD's requirements, and sign off professionally. Format using Markdown.
-6. Generate "interviewPrep". A list of 3 to 5 realistic technical or behavioral questions specific to this role that the interviewer might ask, along with highly tailored, recommended answers based on the user's background.
-7. Score "skillCategories". Analyze and rate both the user's current skill and the job's demand (0 to 100) across these 5 categories: "Frontend", "Backend", "AI / Data", "DevOps", and "Soft Skills".
+6. Generate "relevantProjectIds". Analyze the user's projects against the job description and return an array of up to 2 string IDs of the most relevant projects. If none are relevant, return an empty array.
+7. Generate "interviewPrep". A list of 3 to 5 realistic technical or behavioral questions specific to this role that the interviewer might ask, along with highly tailored, recommended answers based on the user's background.
+8. Score "skillCategories". Analyze and rate both the user's current skill and the job's demand (0 to 100) across these 5 categories: "Frontend", "Backend", "AI / Data", "DevOps", and "Soft Skills".
 
 Output MUST be valid JSON matching this schema:
 {
@@ -101,6 +103,7 @@ Output MUST be valid JSON matching this schema:
   "missingKeywords": ["string"],
   "tailoredResumeSnippet": "string",
   "tailoredCoverLetter": "string",
+  "relevantProjectIds": ["string"],
   "interviewPrep": [
     {
       "question": "string",

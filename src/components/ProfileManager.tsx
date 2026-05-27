@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAppState } from '../state';
-import { Save, AlertCircle, Plus, Trash2, Link2, FileText, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
+import { Save, AlertCircle, Plus, Trash2, Link2, FileText, Loader2, Sparkles, AlertTriangle, Download } from 'lucide-react';
 import { parseProfileData } from '../lib/gemini';
 import clsx from 'clsx';
 import type { WorkExperience, Education } from '../types';
+import { ResumeTemplate } from './ResumeTemplate';
 
 export function ProfileManager() {
   const { profile, setProfile } = useAppState();
@@ -20,6 +22,36 @@ export function ProfileManager() {
   const [skillsString, setSkillsString] = useState(profile.skills.join(', '));
   const [saved, setSaved] = useState(false);
 
+  // Resume Download State
+  const [isGeneratingResume, setIsGeneratingResume] = useState(false);
+  const [printProgress, setPrintProgress] = useState(0);
+  const [printingType, setPrintingType] = useState<'resume' | null>(null);
+
+  const handleDownloadGenericResume = () => {
+    setIsGeneratingResume(true);
+    setPrintProgress(0);
+    setPrintingType('resume');
+
+    const duration = 1500;
+    const intervalTime = 50;
+    const steps = duration / intervalTime;
+    let currentStep = 0;
+
+    const timer = setInterval(() => {
+      currentStep++;
+      setPrintProgress(Math.min(100, Math.round((currentStep / steps) * 100)));
+
+      if (currentStep >= steps) {
+        clearInterval(timer);
+        setTimeout(() => {
+          window.print();
+          setIsGeneratingResume(false);
+          setPrintingType(null);
+        }, 300);
+      }
+    }, intervalTime);
+  };
+
   // Auto-Import State
   const [importMode, setImportMode] = useState<'url' | 'text'>('text');
   const [importUrl, setImportUrl] = useState('');
@@ -27,7 +59,7 @@ export function ProfileManager() {
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState('');
 
-  const handleAutoImport = async () => {
+  const handleAutoImport = async (merge: boolean = false) => {
     if (importMode === 'url' && !importUrl) return;
     if (importMode === 'text' && !importText) return;
 
@@ -52,12 +84,21 @@ export function ProfileManager() {
         phone: parsedData.phone || prev.phone,
         location: parsedData.location || prev.location,
         summary: parsedData.summary || prev.summary,
-        experience: parsedData.experience || prev.experience,
-        projects: parsedData.projects || prev.projects,
-        education: parsedData.education || prev.education,
+        experience: merge 
+          ? [...prev.experience, ...(parsedData.experience || [])]
+          : parsedData.experience || prev.experience,
+        projects: merge 
+          ? [...(prev.projects || []), ...(parsedData.projects || [])]
+          : parsedData.projects || prev.projects,
+        education: merge 
+          ? [...prev.education, ...(parsedData.education || [])]
+          : parsedData.education || prev.education,
       }));
       if (parsedData.skills) {
-        setSkillsString(parsedData.skills.join(', '));
+        setSkillsString(prevSkills => merge 
+          ? Array.from(new Set([...prevSkills.split(',').map(s => s.trim()), ...parsedData.skills])).filter(Boolean).join(', ')
+          : parsedData.skills.join(', ')
+        );
       }
       
       setImportText('');
@@ -245,15 +286,26 @@ export function ProfileManager() {
               </div>
             )}
 
-            <button
-              type="button"
-              onClick={handleAutoImport}
-              disabled={isImporting || (importMode === 'url' ? !importUrl : !importText)}
-              className="bg-canvas-dark hover:bg-surface-elevated disabled:opacity-50 text-on-dark px-8 py-3.5 rounded-full font-semibold transition-all flex items-center justify-center gap-2 w-full md:w-auto uppercase text-xs"
-            >
-              {isImporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
-              {isImporting ? 'Parsing with AI...' : 'Auto-Fill Profile'}
-            </button>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button
+                type="button"
+                onClick={() => handleAutoImport(false)}
+                disabled={isImporting || (importMode === 'url' ? !importUrl : !importText)}
+                className="bg-canvas-dark hover:bg-surface-elevated disabled:opacity-50 text-on-dark px-8 py-3.5 rounded-full font-semibold transition-all flex items-center justify-center gap-2 flex-1 uppercase text-xs"
+              >
+                {isImporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                {isImporting ? 'Parsing with AI...' : 'Overwrite Profile'}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAutoImport(true)}
+                disabled={isImporting || (importMode === 'url' ? !importUrl : !importText)}
+                className="bg-surface-soft hover:bg-faint border border-hairline-light disabled:opacity-50 text-ink px-8 py-3.5 rounded-full font-semibold transition-all flex items-center justify-center gap-2 flex-1 uppercase text-xs"
+              >
+                {isImporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+                {isImporting ? 'Parsing with AI...' : 'Update Data Profile'}
+              </button>
+            </div>
           </section>
 
           {/* Basic Info */}
@@ -595,15 +647,57 @@ export function ProfileManager() {
           <span className="text-xs font-mono text-mute tracking-widest uppercase">
             Last synced: {new Date(profile.lastUpdated).toLocaleString()}
           </span>
-          <button
-            type="submit"
-            className="bg-canvas-dark hover:bg-surface-elevated text-on-dark px-8 py-3.5 rounded-full font-semibold transition-all flex items-center gap-2 uppercase text-sm"
-          >
-            <Save className="w-5 h-5" />
-            {saved ? 'Saved!' : 'Save & Re-Index Profile'}
-          </button>
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={handleDownloadGenericResume}
+              className="bg-surface-soft hover:bg-faint text-ink px-8 py-3.5 rounded-full font-semibold transition-all flex items-center gap-2 uppercase text-sm border border-hairline-light"
+            >
+              <Download className="w-5 h-5" />
+              Download Resume
+            </button>
+            <button
+              type="submit"
+              className="bg-canvas-dark hover:bg-surface-elevated text-on-dark px-8 py-3.5 rounded-full font-semibold transition-all flex items-center gap-2 uppercase text-sm"
+            >
+              <Save className="w-5 h-5" />
+              {saved ? 'Saved!' : 'Save & Re-Index Profile'}
+            </button>
+          </div>
         </div>
       </form>
+
+      {printingType === 'resume' && createPortal(
+        <div id="print-portal">
+          <ResumeTemplate 
+            profile={{
+              ...formData,
+              skills: skillsString.split(',').map(s => s.trim()).filter(Boolean),
+              lastUpdated: new Date().toISOString()
+            }} 
+          />
+        </div>,
+        document.body
+      )}
+
+      {isGeneratingResume && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-canvas-parchment/80 backdrop-blur-md print:hidden">
+          <div className="w-80 p-8 bg-canvas border border-divider-soft rounded-3xl shadow-product text-center">
+            <h4 className="text-tagline text-ink mb-4 font-semibold">
+              Preparing ATS-Compliant PDF
+            </h4>
+            <div className="h-2 bg-divider-soft rounded-full overflow-hidden mb-3">
+              <div 
+                className="h-full bg-primary transition-all duration-75"
+                style={{ width: `${printProgress}%` }}
+              />
+            </div>
+            <p className="text-sm text-ink-muted-48">
+              Formatting content for printer output ({printProgress}%)
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -43,6 +43,7 @@ export interface JobApplication {
   dateAdded: string;
   matchScore?: number;
   extractedKeywords?: string[];
+  relevantProjectIds?: string[];
   tailoredResumeSnippet?: string;
   tailoredCoverLetter?: string;
   interviewPrep?: InterviewQuestion[];

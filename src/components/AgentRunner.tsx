@@ -123,6 +123,7 @@ export function AgentRunner() {
         extractedKeywords: [...analysis.matchingKeywords, ...analysis.missingKeywords],
         tailoredResumeSnippet: analysis.tailoredResumeSnippet,
         tailoredCoverLetter: analysis.tailoredCoverLetter,
+        relevantProjectIds: analysis.relevantProjectIds || [],
         interviewPrep: analysis.interviewPrep,
         skillCategories: analysis.skillCategories,
         agentLogs: runLogs
@@ -215,42 +216,50 @@ export function AgentRunner() {
 
           <div className="w-full max-w-2xl pt-12 border-t border-hairline-light">
             <h3 className="text-display-md text-ink mb-10 font-semibold uppercase">Pipeline Status</h3>
-            <div className="flex items-start w-full relative">
-              {/* Connected Background Track Line */}
-              <div className="absolute left-6 right-6 top-5 h-0.5 bg-hairline-light z-0"></div>
-              {/* Connected Active Background Track Line */}
-              <div 
-                className="absolute left-6 top-5 h-0.5 bg-primary transition-all duration-500 z-0"
-                style={{ width: `${(Math.max(0, currentStep) / (steps.length - 1)) * 100 * 0.9}%` }}
-              ></div>
-
+            <div className="flex flex-col gap-4 w-full">
               {steps.map((step, idx) => {
                 const Icon = step.icon;
                 const status = idx < currentStep ? 'complete' : idx === currentStep && isRunning ? 'active' : 'pending';
+                // Calculate width and offset for a pseudo-Gantt layout
+                const width = 100 / steps.length;
+                const left = idx * width;
                 
                 return (
-                  <div key={step.id} className="flex-1 flex flex-col items-center relative z-10">
-                    {/* Circle Node */}
-                    <div className={clsx(
-                      "w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-2 transition-all duration-300 relative bg-canvas-light",
-                      status === 'complete' ? "border-primary text-primary" :
-                      status === 'active' ? "border-primary text-primary bg-canvas-light" :
-                      "border-hairline-light text-stone bg-canvas-light"
-                    )}>
-                      {status === 'active' && (
-                        <span className="absolute inset-0 rounded-full bg-primary/20 animate-ping z-0" />
+                  <div key={step.id} className="relative h-12 w-full bg-surface-soft rounded-lg overflow-hidden group">
+                    <div 
+                      className={clsx(
+                        "absolute top-0 bottom-0 left-0 transition-all duration-1000 ease-in-out border-l-4",
+                        status === 'complete' ? "bg-primary/10 border-primary w-full" :
+                        status === 'active' ? "bg-primary/20 border-primary shadow-[0_0_15px_rgba(var(--color-primary),0.3)] w-full" :
+                        "bg-transparent border-transparent w-0"
                       )}
-                      <span className="relative z-10">
-                        {status === 'active' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}
+                      style={{ 
+                        transform: status === 'active' ? 'scaleX(1)' : status === 'complete' ? 'scaleX(1)' : 'scaleX(0)',
+                        transformOrigin: 'left'
+                      }}
+                    />
+                    {status === 'active' && (
+                      <div className="absolute top-0 bottom-0 left-0 w-full bg-gradient-to-r from-transparent via-primary/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
+                    )}
+                    <div className="absolute inset-0 flex items-center px-4 gap-3 z-10">
+                      <div className={clsx(
+                        "w-6 h-6 rounded-md flex items-center justify-center shrink-0 transition-colors",
+                        status === 'complete' ? "text-primary bg-primary/10" :
+                        status === 'active' ? "text-primary bg-primary/20" :
+                        "text-stone bg-canvas-dark/5"
+                      )}>
+                        {status === 'active' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Icon className="w-3.5 h-3.5" />}
+                      </div>
+                      <span className={clsx(
+                        "text-xs font-semibold uppercase tracking-wider font-sans",
+                        status === 'pending' ? "text-stone" : "text-ink"
+                      )}>
+                        {step.label}
                       </span>
+                      <div className="ml-auto text-[10px] text-mute font-mono uppercase">
+                        {status === 'complete' ? 'Done' : status === 'active' ? 'In Progress' : 'Waiting'}
+                      </div>
                     </div>
-                    {/* Step Label */}
-                    <span className={clsx(
-                      "text-[10px] font-semibold uppercase tracking-wider mt-3 text-center px-1 font-sans block max-w-[80px]",
-                      status === 'pending' ? "text-stone" : "text-ink"
-                    )}>
-                      {step.label}
-                    </span>
                   </div>
                 );
               })}

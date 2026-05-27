@@ -29,9 +29,11 @@
 
 ### ATS-Compliant 1-Page Resume Builder
 * **Selectable Text Layer:** Replaces standard JS image-canvas PDF renderers with the browser's native print API (`window.print()`), ensuring PDFs are 100% searchable, select-enabled, and optimized for ATS parsers.
+* **Dynamic Theming & Typography:** Customize your resume and cover letter on-the-fly with settings-driven themes (Classic, Modern, Minimal) and premium typography choices.
 * **Auto-Sized Page Constraint:** Implements a strict typographical grid scale that clamps summary lengths (maximum 3 sentences) and layouts to fit exactly onto a single page without overflowing.
 
-### Portfolio Projects Manager
+### Portfolio Projects & Profile Management
+* **Update / Merge Profile Data:** Auto-import your profile using AI from LinkedIn or resume text with the ability to safely merge new experience/projects without overwriting existing data.
 * **Tailored Mapping:** Add your technology portfolios, links, and project descriptions inside your profile.
 * **Keyword Synthesis:** The AI automatically extracts tech-stack tags from job descriptions and dynamically inserts the two most relevant projects into your tailored resume templates.
 
@@ -90,6 +92,13 @@ Open your browser and navigate to `http://localhost:5173`.
 ```bash
 npm run build
 ```
+
+### 6. Deploying to Vercel
+The app includes a dedicated Vercel serverless function (`api/scrape.ts`) to handle CORS-bypassing securely in production.
+1. Import the repository into your Vercel Dashboard.
+2. Vercel automatically detects Vite. Leave the build commands default.
+3. Add `GEMINI_API_KEY` to the **Environment Variables**.
+4. Deploy! (The `api/` directory automatically mounts the required backend scraping function).
 
 ---
 

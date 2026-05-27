@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppState } from '../state';
-import { ExternalLink, MoreVertical, ChevronDown, ChevronUp, FileDown, Loader2, X, Target, Sparkles, HelpCircle, Briefcase, Award, Bot, ArrowLeft, Send, Play } from 'lucide-react';
+import { ExternalLink, MoreVertical, ChevronDown, ChevronUp, FileDown, Loader2, X, Target, Sparkles, HelpCircle, Briefcase, Award, Bot, ArrowLeft, Send, Play, Terminal as TerminalIcon } from 'lucide-react';
 import type { JobApplication, ApplicationStatus, UserProfile, InterviewQuestion } from '../types';
 import { createPortal } from 'react-dom';
 import { ResumeTemplate } from './ResumeTemplate';
@@ -53,8 +53,8 @@ export function JobTracker() {
 
             const isDraggedOver = draggedOverColumn === col.id;
             const dragOutlineClass = isDraggedOver 
-              ? 'border-primary ring-2 ring-primary/20 scale-[1.01] transition-all'
-              : '';
+              ? 'border-primary ring-4 ring-primary/20 shadow-[0_0_30px_#494fdf80] scale-[1.02] transition-all duration-300 ease-out z-10 relative'
+              : 'transition-all duration-300 ease-out';
 
             return (
               <div 
@@ -148,7 +148,7 @@ function JobCard({ app, onStatusChange, onSelect, isDark, onDragEnd }: JobCardPr
         e.dataTransfer.setData('text/plain', app.id);
       }}
       onDragEnd={onDragEnd}
-      className={`w-full p-5 rounded-2xl border transition-all cursor-grab active:cursor-grabbing select-none text-left ${cardBg}`}
+      className={`w-full p-5 rounded-2xl border transition-all cursor-grab active:cursor-grabbing select-none text-left transform-gpu ${cardBg}`}
     >
       <div className="flex justify-between items-start mb-1.5">
         <h4 className={`text-sm font-bold tracking-tight line-clamp-1 ${textTitle}`} title={app.role}>{app.role}</h4>
@@ -187,11 +187,11 @@ function JobCard({ app, onStatusChange, onSelect, isDark, onDragEnd }: JobCardPr
       {app.matchScore && (
         <div className="mb-4">
           <div className="flex justify-between text-[10px] mb-1.5 font-mono uppercase tracking-wider">
-            <span className={textSub}>Match Index</span>
-            <span className={`font-semibold ${isDark ? 'text-primary-on-dark' : 'text-primary'}`}>{app.matchScore}%</span>
+            <span className={isDark ? 'text-on-dark-mute' : textSub}>Match Index</span>
+            <span className={`font-semibold text-primary`}>{app.matchScore}%</span>
           </div>
-          <div className={`h-1 w-full rounded-full overflow-hidden ${isDark ? 'bg-surface-deep' : 'bg-surface-soft'}`}>
-            <div className={`h-full rounded-full ${isDark ? 'bg-primary-on-dark' : 'bg-primary'}`} style={{ width: `${app.matchScore}%` }} />
+          <div className={`h-1 w-full rounded-full overflow-hidden ${isDark ? 'bg-white/10' : 'bg-surface-soft'}`}>
+            <div className={`h-full rounded-full bg-primary`} style={{ width: `${app.matchScore}%` }} />
           </div>
         </div>
       )}
@@ -559,24 +559,40 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
                       {/* Input Section */}
                       {!gradeResult && (
                         <div className="space-y-4">
-                          <label className="block text-xs font-semibold text-mute uppercase tracking-wider">Your Mock Response (use STAR format if possible)</label>
-                          <textarea
-                            rows={5}
-                            placeholder="Describe the Situation, the Task, the Action you took, and the ultimate Result..."
-                            value={userAnswer}
-                            onChange={e => setUserAnswer(e.target.value)}
-                            disabled={isGrading}
-                            className="w-full px-4 py-3 bg-canvas-light border border-hairline-light rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all resize-none text-sm text-ink placeholder:text-stone font-sans"
-                          />
+                          <label className="block text-xs font-semibold text-mute uppercase tracking-wider">Terminal Simulator</label>
+                          <div className="w-full bg-[#1e1e1e] rounded-xl overflow-hidden shadow-lg border border-[#333]">
+                            <div className="px-4 py-2 bg-[#2d2d2d] border-b border-[#333] flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
+                              <div className="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
+                              <div className="w-3 h-3 rounded-full bg-[#27c93f]"></div>
+                              <span className="text-[10px] font-mono text-[#8a8a8a] ml-2">bash - mock-interview</span>
+                            </div>
+                            <div className="p-4 font-mono text-[13px] text-[#d4d4d4] flex flex-col gap-2">
+                              <div className="flex gap-2">
+                                <span className="text-[#4af626]">user@talentflow:~$</span>
+                                <span>./answer_question.sh</span>
+                              </div>
+                              <div className="text-[#8a8a8a] text-[11px] mb-2"># Describe the Situation, Task, Action, and Result (STAR)</div>
+                              <textarea
+                                rows={6}
+                                value={userAnswer}
+                                onChange={e => setUserAnswer(e.target.value)}
+                                disabled={isGrading}
+                                className="w-full bg-transparent border-none outline-none resize-none text-[#d4d4d4] placeholder:text-[#555] font-mono"
+                                placeholder="Type your response here..."
+                                autoFocus
+                              />
+                            </div>
+                          </div>
                           {gradeError && <p className="text-xs text-rose-500 font-semibold">{gradeError}</p>}
                           <button
                             type="button"
                             onClick={handleGradeAnswer}
                             disabled={isGrading || !userAnswer.trim()}
-                            className="flex items-center justify-center gap-2 px-6 py-3 bg-canvas-dark hover:bg-surface-elevated disabled:opacity-50 text-on-dark rounded-full text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
+                            className="flex items-center justify-center gap-2 px-6 py-3 bg-canvas-dark hover:bg-surface-elevated disabled:opacity-50 text-on-dark rounded-full text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer w-full"
                           >
-                            {isGrading ? <Loader2 className="w-4 h-4 animate-spin text-on-dark" /> : <Send className="w-4 h-4 text-on-dark" />}
-                            {isGrading ? 'Evaluating Response...' : 'Submit Answer'}
+                            {isGrading ? <Loader2 className="w-4 h-4 animate-spin text-on-dark" /> : <TerminalIcon className="w-4 h-4 text-on-dark" />}
+                            {isGrading ? 'Executing Analysis...' : 'Submit Answer'}
                           </button>
                         </div>
                       )}
