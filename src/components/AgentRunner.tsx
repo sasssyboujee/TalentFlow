@@ -72,7 +72,7 @@ interface AgentRunnerProps {
 }
 
 export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
-  const { profile, addApplication, setView, settings, applications } = useAppState();
+  const { profile, addApplication, setView, settings, applications, prefilledJob, setPrefilledJob } = useAppState();
   const [inputMode, setInputMode] = useState<'url' | 'text'>('url');
   const [url, setUrl] = useState('');
   const [jdText, setJdText] = useState('');
@@ -110,10 +110,14 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
     }
   }, [logs]);
 
-  const handleRunAgent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (inputMode === 'url' && !url) return;
-    if (inputMode === 'text' && !jdText) return;
+  const handleRunAgent = async (e?: React.FormEvent, overrideUrl?: string, overrideJdText?: string) => {
+    if (e) e.preventDefault();
+    const targetUrl = overrideUrl !== undefined ? overrideUrl : url;
+    const targetJdText = overrideJdText !== undefined ? overrideJdText : jdText;
+    const targetInputMode = overrideUrl !== undefined ? 'url' : (overrideJdText !== undefined ? 'text' : inputMode);
+
+    if (targetInputMode === 'url' && !targetUrl) return;
+    if (targetInputMode === 'text' && !targetJdText) return;
 
     setIsRunning(true);
     setLogs([]);
@@ -127,10 +131,10 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
     };
 
     // Pre-execution duplicate URL check
-    if (inputMode === 'url' && url) {
-      const isDuplicateUrl = applications.some(app => app.url === url);
+    if (targetInputMode === 'url' && targetUrl) {
+      const isDuplicateUrl = applications.some(app => app.url === targetUrl);
       if (isDuplicateUrl) {
-        internalPushLog(`Duplicate check: The URL "${url}" is already in your Job Tracker.`, 'error');
+        internalPushLog(`Duplicate check: The URL "${targetUrl}" is already in your Job Tracker.`, 'error');
         playErrorBuzzer();
         setIsRunning(false);
         return;
@@ -140,9 +144,9 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
     try {
       let finalJdText = '';
 
-      if (inputMode === 'url') {
-        internalPushLog(`Fetching URL via internal proxy: ${url}...`);
-        const res = await fetch(`/api/scrape?url=${encodeURIComponent(url)}`);
+      if (targetInputMode === 'url') {
+        internalPushLog(`Fetching URL via internal proxy: ${targetUrl}...`);
+        const res = await fetch(`/api/scrape?url=${encodeURIComponent(targetUrl)}`);
         if (!res.ok) {
           throw new Error(`Failed to fetch URL: ${res.statusText}`);
         }
@@ -152,8 +156,8 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
         finalJdText = data.text;
         internalPushLog(`DOM Scraped successfully. Extracted ${finalJdText.length} characters.`, 'success');
       } else {
-        internalPushLog(`Using provided raw JD text (${jdText.length} characters)...`);
-        finalJdText = jdText;
+        internalPushLog(`Using provided raw JD text (${targetJdText.length} characters)...`);
+        finalJdText = targetJdText;
       }
       setCurrentStep(1);
 
@@ -210,7 +214,7 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
         id: `app-${Date.now()}`,
         company: analysis.company || 'Unknown',
         role: analysis.role || 'Unknown Role',
-        url: inputMode === 'url' ? url : 'Manual Input',
+        url: targetInputMode === 'url' ? targetUrl : 'Manual Input',
         status: 'ready' as const,
         dateAdded: new Date().toISOString(),
         matchScore: analysis.matchScore,
@@ -246,6 +250,26 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
       setIsRunning(false);
     }
   };
+
+  useEffect(() => {
+    if (prefilledJob) {
+      const { url: pUrl, jdText: pJd, autoRun } = prefilledJob;
+      
+      if (pUrl) {
+        setInputMode('url');
+        setUrl(pUrl);
+      } else if (pJd) {
+        setInputMode('text');
+        setJdText(pJd);
+      }
+      
+      setPrefilledJob(undefined);
+      
+      if (autoRun) {
+        handleRunAgent(undefined, pUrl, pJd);
+      }
+    }
+  }, [prefilledJob, setPrefilledJob]);
 
   const layoutContent = (
     <div className="flex flex-col lg:flex-row w-full flex-1 min-h-0 border-t border-hairline-light">

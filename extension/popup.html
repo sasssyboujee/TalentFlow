@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TalentFlow Connector</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="popup-container">
+    <header class="header">
+      <div class="logo-area">
+        <div class="logo-orb"></div>
+        <h1 class="logo-text">Talent<span>Flow</span></h1>
+      </div>
+      <div id="status-badge" class="status-badge disconnected">Disconnected</div>
+    </header>
+
+    <main class="content">
+      <div class="glass-card">
+        <div class="info-group">
+          <label class="label">Active Job URL</label>
+          <div class="value-container">
+            <span id="job-url" class="value truncate">Loading active tab...</span>
+          </div>
+        </div>
+        
+        <div class="info-group font-semibold">
+          <label class="label">Job Title / Role</label>
+          <div class="value-container">
+            <span id="job-title" class="value truncate">...</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <label class="checkbox-container">
+          <input type="checkbox" id="auto-run-checkbox" checked>
+          <span class="checkmark"></span>
+          <span class="checkbox-label">Automatically deploy agent tailoring</span>
+        </label>
+      </div>
+
+      <div class="actions">
+        <button id="send-btn" class="btn btn-primary" disabled>
+          <span class="btn-text">Send & Deploy</span>
+          <div class="btn-glow"></div>
+        </button>
+      </div>
+    </main>
+    
+    <footer class="footer">
+      <span>TalentFlow browser extension V1.0</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

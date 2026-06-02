@@ -118,6 +118,12 @@ const DEFAULT_SETTINGS: SystemSettings = {
   coachDifficulty: 'strict',
 };
 
+export interface PrefilledJob {
+  url?: string;
+  jdText?: string;
+  autoRun?: boolean;
+}
+
 interface AppStateContextType {
   view: ViewState;
   setView: (view: ViewState) => void;
@@ -131,13 +137,30 @@ interface AppStateContextType {
   updateApplicationDetails: (id: string, updates: Partial<JobApplication>) => void;
   settings: SystemSettings;
   updateSettings: (updates: Partial<SystemSettings>) => void;
+  prefilledJob?: PrefilledJob;
+  setPrefilledJob: (job?: PrefilledJob) => void;
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
 
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [view, setView] = useState<ViewState>('dashboard');
-  
+  const [prefilledJob, setPrefilledJob] = useState<PrefilledJob | undefined>(undefined);
+
+  // Listen for Chrome Extension events
+  useEffect(() => {
+    const handleExtensionSend = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { url, jdText, autoRun } = customEvent.detail || {};
+      
+      setPrefilledJob({ url, jdText, autoRun });
+      setView('runner');
+    };
+    
+    window.addEventListener('AUTOJOB_EXTENSION_SEND', handleExtensionSend);
+    return () => window.removeEventListener('AUTOJOB_EXTENSION_SEND', handleExtensionSend);
+  }, []);
+
   // Persist Settings
   const [settings, setSettingsState] = useState<SystemSettings>(() => {
     try {
@@ -239,7 +262,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       view, setView,
       profile, setProfile,
       applications, addApplication, deleteApplication, updateApplicationStatus, updateApplicationLogs, updateApplicationDetails,
-      settings, updateSettings
+      settings, updateSettings,
+      prefilledJob, setPrefilledJob
     }}>
       {children}
     </AppStateContext.Provider>
