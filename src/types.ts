@@ -46,6 +46,7 @@ export interface JobApplication {
   relevantProjectIds?: string[];
   tailoredResumeSnippet?: string;
   tailoredCoverLetter?: string;
+  tailoredSkills?: string[];
   interviewPrep?: InterviewQuestion[];
   skillCategories?: SkillCategoryScore[];
   agentLogs?: AgentLog[];
@@ -84,10 +85,14 @@ export interface UserProfile {
 export interface SystemSettings {
   geminiApiKey: string;
   geminiModel: string;
+  deepseekApiKey: string;
+  deepseekModel: string;
+  activeProvider: 'gemini' | 'deepseek';
   scraperDelay: number;
   minMatchThreshold: number;
   autoOverwriteSkills: boolean;
   autoExtractLocation: boolean;
+  autoSelectProjects: boolean;
   strictOnePage: boolean;
   resumeTheme: string;
   resumeFont: string;

@@ -12,24 +12,115 @@ const ai = new GoogleGenAI({
   apiKey: apiKey || '',
 });
 
-function getClientAndModel(defaultModel = 'gemini-3.5-flash'): { client: GoogleGenAI; model: string } {
-  let client = ai;
-  let model = defaultModel;
+async function generateLLMResponse(prompt: string): Promise<string> {
+  let activeProvider = 'gemini';
+  let geminiModel = 'gemini-3.5-flash';
+  let geminiApiKey = '';
+  let deepseekModel = 'deepseek-chat';
+  let deepseekApiKey = '';
+
   try {
     const savedSettings = localStorage.getItem('agent_settings');
     if (savedSettings) {
       const parsed = JSON.parse(savedSettings);
-      if (parsed.geminiApiKey) {
-        client = new GoogleGenAI({ apiKey: parsed.geminiApiKey });
-      }
-      if (parsed.geminiModel) {
-        model = parsed.geminiModel;
-      }
+      if (parsed.activeProvider) activeProvider = parsed.activeProvider;
+      if (parsed.geminiModel) geminiModel = parsed.geminiModel;
+      if (parsed.geminiApiKey) geminiApiKey = parsed.geminiApiKey;
+      if (parsed.deepseekModel) deepseekModel = parsed.deepseekModel;
+      if (parsed.deepseekApiKey) deepseekApiKey = parsed.deepseekApiKey;
     }
   } catch (e) {
     // Ignore
   }
-  return { client, model };
+
+  const maxAttempts = 5;
+  let currentGeminiModel = geminiModel;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      if (activeProvider === 'deepseek') {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (deepseekApiKey) {
+          headers['Authorization'] = `Bearer ${deepseekApiKey}`;
+        }
+
+        const response = await fetch('/api/llm', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model: deepseekModel || 'deepseek-chat',
+            messages: [
+              { role: 'user', content: prompt }
+            ],
+            response_format: { type: 'json_object' }
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw errData?.error ? new Error(errData.error.message || errData.error) : new Error(`HTTP error ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const choice = data?.choices?.[0];
+        if (!choice?.message?.content) {
+          throw new Error('Invalid response format from DeepSeek API');
+        }
+
+        return choice.message.content;
+      } else {
+        // Gemini Flow
+        let client = ai;
+        if (geminiApiKey) {
+          client = new GoogleGenAI({ apiKey: geminiApiKey });
+        }
+        const response = await client.models.generateContent({
+          model: currentGeminiModel,
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+          },
+        });
+
+        if (!response.text) {
+          throw new Error('No response from Gemini');
+        }
+        return response.text;
+      }
+    } catch (error: any) {
+      const errorStr = JSON.stringify(error) || String(error);
+      const isRetryable =
+        error?.status === 503 ||
+        error?.status === 429 ||
+        errorStr.includes('503') ||
+        errorStr.includes('429') ||
+        errorStr.includes('UNAVAILABLE') ||
+        errorStr.includes('RESOURCE_EXHAUSTED');
+
+      if (attempt < maxAttempts && isRetryable) {
+        // Exponential backoff: 2s, 4s, 8s, 16s...
+        const delay = Math.pow(2, attempt) * 1000;
+        
+        // Model Fallback: if gemini-2.5-pro is experiencing high demand (503), switch to 3.5-flash
+        if (activeProvider === 'gemini' && currentGeminiModel === 'gemini-2.5-pro') {
+          console.warn(`Gemini 2.5 Pro unavailable (attempt ${attempt}). Falling back to Gemini 3.5 Flash...`);
+          currentGeminiModel = 'gemini-3.5-flash';
+        } else {
+          console.warn(`LLM Provider busy (attempt ${attempt}). Retrying in ${delay / 1000}s...`);
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      console.error(`LLM call failed after attempt ${attempt}:`, error);
+      throw error;
+    }
+  }
+
+  throw new Error('Failed to generate LLM response after maximum retry attempts');
 }
 
 export interface JobMatchAnalysis {
@@ -40,6 +131,7 @@ export interface JobMatchAnalysis {
   missingKeywords: string[];
   tailoredResumeSnippet: string;
   tailoredCoverLetter: string;
+  tailoredSkills: string[];
   relevantProjectIds: string[];
   interviewPrep: { question: string; answer: string }[];
   skillCategories: { category: string; userScore: number; jobDemandScore: number }[];
@@ -65,6 +157,12 @@ export async function analyzeJobMatch(
     ? "Keep it extremely compact (maximum of 3 sentences, roughly 60-70 words) so that the tailored resume can fit neatly on a single printed page."
     : "Write a detailed and comprehensive professional summary (4-6 sentences, roughly 100-150 words) highlighting their relevant experience in depth.";
 
+  const todayStr = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
   const prompt = `
 You are an expert AI career coach and recruiter. Your task is to analyze the provided Job Description (JD) and the User Profile, and then output a structured JSON analysis.
 
@@ -88,11 +186,12 @@ INSTRUCTIONS:
 1. Extract the "company" name and "role" title from the job description. (If not found, use "Unknown").
 2. Calculate a "matchScore" (0 to 100) based on how well the User Profile aligns with the Job Description.
 3. Identify "matchingKeywords" (skills the user has that the job requires) and "missingKeywords" (skills the job requires that the user is missing).
-4. Generate a "tailoredResumeSnippet". This is a professional summary written in the first person that highlights the user's matching skills and aligns their experience with the job description. ${resumeSnippetConstraint} Format using Markdown.
-5. Generate a "tailoredCoverLetter". This is a full, professional cover letter (3-4 paragraphs, roughly 250-350 words) written in the first person. Include headers (sender info, placeholder date, addressing the hiring team), introduce the role, highlight 1-2 major matching achievements from the user's experience that directly address the JD's requirements, and sign off professionally. Format using Markdown.
+4. Generate a "tailoredResumeSnippet". This is a professional summary written in the first person that highlights the user's matching skills and aligns their experience with the job description. ${resumeSnippetConstraint} Output as clean, raw plain-text ONLY. Do NOT use markdown styling, asterisks for bolding, or markdown lists.
+5. Generate a "tailoredCoverLetter". This is a full, professional cover letter (3-4 paragraphs, roughly 250-350 words) written in the first person. Start the cover letter directly with the formal salutation (e.g., 'Dear Hiring Team,' or 'Dear [Company] Hiring Team,') and sign off professionally. Do NOT include sender contact info headers, addresses, or duplicate date headers at the very top, as these are already rendered by the page layout template. Use the current date (${todayStr}) for any date mentions or date headers if needed. Format using Markdown.
 6. Generate "relevantProjectIds". Analyze the user's projects against the job description and return an array of up to 2 string IDs of the most relevant projects. If none are relevant, return an empty array.
 7. Generate "interviewPrep". A list of 3 to 5 realistic technical or behavioral questions specific to this role that the interviewer might ask, along with highly tailored, recommended answers based on the user's background.
 8. Score "skillCategories". Analyze and rate both the user's current skill and the job's demand (0 to 100) across these 5 categories: "Frontend", "Backend", "AI / Data", "DevOps", and "Soft Skills".
+9. Generate "tailoredSkills". Select the user's relevant skills from their profile, and automatically add 2 to 4 key realistic technical skills mentioned in the job description that the user could reasonably possess or pick up quickly (do not add overly advanced or completely unrelated skills to keep it realistic and not too ambitious). Combine these into a single array of up to 15-18 skills total.
 
 Output MUST be valid JSON matching this schema:
 {
@@ -103,6 +202,7 @@ Output MUST be valid JSON matching this schema:
   "missingKeywords": ["string"],
   "tailoredResumeSnippet": "string",
   "tailoredCoverLetter": "string",
+  "tailoredSkills": ["string"],
   "relevantProjectIds": ["string"],
   "interviewPrep": [
     {
@@ -120,38 +220,14 @@ Output MUST be valid JSON matching this schema:
 }
 `;
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const { client, model } = getClientAndModel();
-      const response = await client.models.generateContent({
-        model: model,
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-        },
-      });
-
-      if (!response.text) {
-        throw new Error('No response from Gemini');
-      }
-
-      const data = JSON.parse(response.text) as JobMatchAnalysis;
-      return data;
-    } catch (error: any) {
-      const errorStr = JSON.stringify(error);
-      const isRetryable = error?.status === 503 || error?.status === 429 || errorStr.includes('503') || errorStr.includes('429');
-      
-      if (attempt < maxRetries && isRetryable) {
-        console.warn(`Gemini API busy (attempt ${attempt}). Retrying in ${attempt * 2} seconds...`);
-        await new Promise(resolve => setTimeout(resolve, attempt * 2000));
-        continue;
-      }
-      
-      console.error('Error analyzing job match:', error);
-      throw error;
-    }
+  try {
+    const text = await generateLLMResponse(prompt);
+    const data = JSON.parse(text) as JobMatchAnalysis;
+    return data;
+  } catch (error: any) {
+    console.error('Error analyzing job match:', error);
+    throw error;
   }
-  throw new Error('Failed to analyze job match after multiple attempts');
 }
 
 export async function parseProfileData(
@@ -211,38 +287,14 @@ Output MUST be valid JSON matching this schema exactly:
 }
 `;
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const { client, model } = getClientAndModel();
-      const response = await client.models.generateContent({
-        model: model,
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-        },
-      });
-
-      if (!response.text) {
-        throw new Error('No response from Gemini');
-      }
-
-      const data = JSON.parse(response.text) as Partial<UserProfile>;
-      return data;
-    } catch (error: any) {
-      const errorStr = JSON.stringify(error);
-      const isRetryable = error?.status === 503 || error?.status === 429 || errorStr.includes('503') || errorStr.includes('429');
-      
-      if (attempt < maxRetries && isRetryable) {
-        console.warn(`Gemini API busy (attempt ${attempt}). Retrying in ${attempt * 2} seconds...`);
-        await new Promise(resolve => setTimeout(resolve, attempt * 2000));
-        continue;
-      }
-      
-      console.error('Error parsing profile data:', error);
-      throw error;
-    }
+  try {
+    const text = await generateLLMResponse(prompt);
+    const data = JSON.parse(text) as Partial<UserProfile>;
+    return data;
+  } catch (error: any) {
+    console.error('Error parsing profile data:', error);
+    throw error;
   }
-  throw new Error('Failed to parse profile after multiple attempts');
 }
 
 export interface GradeReport {
@@ -329,36 +381,12 @@ Output MUST be valid JSON matching this schema:
 }
 `;
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const { client, model } = getClientAndModel();
-      const response = await client.models.generateContent({
-        model: model,
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-        },
-      });
-
-      if (!response.text) {
-        throw new Error('No response from Gemini');
-      }
-
-      return JSON.parse(response.text) as GradeReport;
-    } catch (error: any) {
-      const errorStr = JSON.stringify(error);
-      const isRetryable = error?.status === 503 || error?.status === 429 || errorStr.includes('503') || errorStr.includes('429');
-      
-      if (attempt < maxRetries && isRetryable) {
-        console.warn(`Gemini API busy (grade attempt ${attempt}). Retrying...`);
-        await new Promise(resolve => setTimeout(resolve, attempt * 2000));
-        continue;
-      }
-      
-      console.error('Error grading interview answer:', error);
-      throw error;
-    }
+  try {
+    const text = await generateLLMResponse(prompt);
+    return JSON.parse(text) as GradeReport;
+  } catch (error: any) {
+    console.error('Error grading interview answer:', error);
+    throw error;
   }
-  throw new Error('Failed to grade interview answer after multiple attempts');
 }
 

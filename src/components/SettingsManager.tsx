@@ -5,6 +5,7 @@ import { Key, Eye, EyeOff, ShieldAlert, Cpu, Sliders, FileText, Bot, Download, U
 export function SettingsManager() {
   const { settings, updateSettings, profile, setProfile, applications, addApplication } = useAppState();
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showDeepseekKey, setShowDeepseekKey] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
   const [importError, setImportError] = useState('');
@@ -102,45 +103,107 @@ export function SettingsManager() {
 
           <div className="space-y-6">
             <div>
-              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">Gemini API Key</label>
-              <div className="relative flex items-center">
-                <input
-                  type={showApiKey ? 'text' : 'password'}
-                  placeholder="Paste your VITE_GEMINI_API_KEY here..."
-                  value={settings.geminiApiKey}
-                  onChange={(e) => {
-                    updateSettings({ geminiApiKey: e.target.value });
-                    triggerSuccessFeedback();
-                  }}
-                  className="w-full pr-12 pl-4 py-3 bg-surface-soft border border-hairline-light rounded-xl font-mono text-xs text-ink focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-4 text-mute hover:text-ink transition-colors bg-transparent border-none outline-none cursor-pointer"
-                >
-                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              <p className="text-[10px] text-mute mt-2">
-                Leave empty to fallback to the default workspace system API key. Your key is stored securely in your browser's local sandbox.
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">Gemini Inference Model</label>
+              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">Active LLM Provider</label>
               <select
-                value={settings.geminiModel}
+                value={settings.activeProvider}
                 onChange={(e) => {
-                  updateSettings({ geminiModel: e.target.value });
+                  updateSettings({ activeProvider: e.target.value as 'gemini' | 'deepseek' });
                   triggerSuccessFeedback();
                 }}
                 className="w-full px-4 py-3 bg-surface-soft border border-hairline-light rounded-xl text-xs text-ink font-semibold focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
               >
-                <option value="gemini-3.5-flash">Gemini 3.5 Flash (Super-fast, default)</option>
-                <option value="gemini-2.5-pro">Gemini 2.5 Pro (Deep reasoning, slower)</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="deepseek">DeepSeek AI</option>
               </select>
             </div>
+
+            {settings.activeProvider === 'gemini' ? (
+              <>
+                <div>
+                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">Gemini API Key</label>
+                  <div className="relative flex items-center">
+                    <input
+                      type={showApiKey ? 'text' : 'password'}
+                      placeholder="Paste your VITE_GEMINI_API_KEY here..."
+                      value={settings.geminiApiKey}
+                      onChange={(e) => {
+                        updateSettings({ geminiApiKey: e.target.value });
+                        triggerSuccessFeedback();
+                      }}
+                      className="w-full pr-12 pl-4 py-3 bg-surface-soft border border-hairline-light rounded-xl font-mono text-xs text-ink focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="absolute right-4 text-mute hover:text-ink transition-colors bg-transparent border-none outline-none cursor-pointer"
+                    >
+                      {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-mute mt-2">
+                    Leave empty to fallback to the default workspace system API key. Your key is stored securely in your browser's local sandbox.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">Gemini Inference Model</label>
+                  <select
+                    value={settings.geminiModel}
+                    onChange={(e) => {
+                      updateSettings({ geminiModel: e.target.value });
+                      triggerSuccessFeedback();
+                    }}
+                    className="w-full px-4 py-3 bg-surface-soft border border-hairline-light rounded-xl text-xs text-ink font-semibold focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
+                  >
+                    <option value="gemini-3.5-flash">Gemini 3.5 Flash (Super-fast, default)</option>
+                    <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite (Most cost-efficient)</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro (Deep reasoning, slower)</option>
+                  </select>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">DeepSeek API Key</label>
+                  <div className="relative flex items-center">
+                    <input
+                      type={showDeepseekKey ? 'text' : 'password'}
+                      placeholder="Paste your DeepSeek API Key here..."
+                      value={settings.deepseekApiKey}
+                      onChange={(e) => {
+                        updateSettings({ deepseekApiKey: e.target.value });
+                        triggerSuccessFeedback();
+                      }}
+                      className="w-full pr-12 pl-4 py-3 bg-surface-soft border border-hairline-light rounded-xl font-mono text-xs text-ink focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowDeepseekKey(!showDeepseekKey)}
+                      className="absolute right-4 text-mute hover:text-ink transition-colors bg-transparent border-none outline-none cursor-pointer"
+                    >
+                      {showDeepseekKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-mute mt-2">
+                    Leave empty to fallback to the default workspace system API key (configured in your local .env file). Your key is stored securely in your browser's local sandbox.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">DeepSeek Inference Model</label>
+                  <select
+                    value={settings.deepseekModel}
+                    onChange={(e) => {
+                      updateSettings({ deepseekModel: e.target.value });
+                      triggerSuccessFeedback();
+                    }}
+                    className="w-full px-4 py-3 bg-surface-soft border border-hairline-light rounded-xl text-xs text-ink font-semibold focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
+                  >
+                    <option value="deepseek-chat">DeepSeek Chat (V3 - Fast & Powerful)</option>
+                  </select>
+                </div>
+              </>
+            )}
           </div>
         </section>
 
@@ -229,6 +292,22 @@ export function SettingsManager() {
                 <div>
                   <span className="text-xs font-bold text-ink block">Auto-extract location</span>
                   <span className="text-[10px] text-mute mt-0.5 block">Extract location fields during parsing actions.</span>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-3 p-4 border border-hairline-light rounded-xl hover:bg-surface-soft transition-colors cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={settings.autoSelectProjects}
+                  onChange={(e) => {
+                    updateSettings({ autoSelectProjects: e.target.checked });
+                    triggerSuccessFeedback();
+                  }}
+                  className="mt-0.5 accent-primary cursor-pointer"
+                />
+                <div>
+                  <span className="text-xs font-bold text-ink block">Auto-select relevant projects</span>
+                  <span className="text-[10px] text-mute mt-0.5 block">Filter and display only the most matching projects on the tailored resume.</span>
                 </div>
               </label>
             </div>

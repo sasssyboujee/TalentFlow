@@ -23,8 +23,12 @@ export function CoverLetterTemplate({ profile, app }: CoverLetterTemplateProps) 
     mono: 'monospace'
   };
 
+  // Replace common date placeholders in the cover letter text with the actual current date
+  const datePlaceholderRegex = /\[\s*(date|current\s*date|today's\s*date|insert\s*date)\s*\]|<\s*(date|current\s*date|today's\s*date|insert\s*date)\s*>/gi;
+
   // Strip common markdown characters from cover letter body to make it look clean for print
   const cleanCoverLetter = (app.tailoredCoverLetter || '')
+    .replace(datePlaceholderRegex, today)
     .replace(/\*\*/g, '')
     .replace(/\*/g, '')
     .replace(/#/g, '');

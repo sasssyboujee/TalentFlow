@@ -27,6 +27,21 @@ export function ProfileManager() {
   const [printProgress, setPrintProgress] = useState(0);
   const [printingType, setPrintingType] = useState<'resume' | null>(null);
 
+  const sanitizeFilenamePart = (str: string) => {
+    return str
+      .replace(/[^a-zA-Z0-9]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  };
+
+  const getLocalDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const handleDownloadGenericResume = () => {
     setIsGeneratingResume(true);
     setPrintProgress(0);
@@ -44,7 +59,21 @@ export function ProfileManager() {
       if (currentStep >= steps) {
         clearInterval(timer);
         setTimeout(() => {
+          const originalTitle = document.title;
+          const cleanName = sanitizeFilenamePart(formData.name || profile.name || 'Resume');
+          const dateStr = getLocalDateString();
+          document.title = `${cleanName}_Resume_${dateStr}`;
+
+          const restoreTitle = () => {
+            document.title = originalTitle;
+            window.removeEventListener('afterprint', restoreTitle);
+          };
+          window.addEventListener('afterprint', restoreTitle);
+          
           window.print();
+          
+          setTimeout(restoreTitle, 500);
+
           setIsGeneratingResume(false);
           setPrintingType(null);
         }, 300);

@@ -10,7 +10,7 @@ interface ResumeTemplateProps {
 export function ResumeTemplate({ profile, app }: ResumeTemplateProps) {
   const { settings } = useAppState();
 
-  const displayProjects = app?.relevantProjectIds && app.relevantProjectIds.length > 0
+  const displayProjects = settings.autoSelectProjects && app?.relevantProjectIds && app.relevantProjectIds.length > 0
     ? profile.projects.filter(p => app.relevantProjectIds!.includes(p.id))
     : profile.projects.slice(0, 2);
 
@@ -32,11 +32,10 @@ export function ResumeTemplate({ profile, app }: ResumeTemplateProps) {
 
   return (
     <div id="resume-template" 
-      className={`w-[816px] h-[1056px] ${colors.bg} p-8 ${colors.text} mx-auto box-border relative overflow-hidden flex flex-col justify-between`}
+      className={`w-[816px] h-[1056px] ${colors.bg} p-10 ${colors.text} mx-auto box-border relative overflow-hidden flex flex-col justify-start`}
       style={{ fontFamily: fontFamilyMap[settings.resumeFont] || 'sans-serif' }}
     >
-      <div>
-        <header className={`mb-3 border-b-2 ${colors.border} pb-2 text-center`}>
+      <header className={`mb-4 border-b-2 ${colors.border} pb-2 text-center`}>
           <h1 className={`text-2xl font-bold uppercase tracking-tight ${colors.text} mb-1`}>{profile.name}</h1>
           <div className={`flex justify-center flex-wrap gap-x-3 gap-y-1 text-xs ${colors.textMute} font-medium max-w-2xl mx-auto`}>
             <span>{profile.email}</span>
@@ -77,8 +76,14 @@ export function ResumeTemplate({ profile, app }: ResumeTemplateProps) {
         <section className="mb-4">
           <h2 className={`text-xs font-bold uppercase tracking-wider ${colors.text} mb-1.5 border-b ${colors.border} pb-0.5`}>Technical Skills</h2>
           <div className="flex flex-wrap gap-1.5">
-            {profile.skills.map((skill, i) => (
-              <span key={i} className="text-[9.5px] bg-slate-50 px-2 py-0.5 text-slate-800 rounded font-medium border border-slate-200">
+            {(app?.tailoredSkills && app.tailoredSkills.length > 0 ? app.tailoredSkills : profile.skills).map((skill, i) => (
+              <span key={i} className={`text-[9.5px] px-2 py-0.5 rounded font-medium border ${
+                settings.resumeTheme === 'minimal' 
+                  ? 'bg-white text-black border-black/15'
+                  : settings.resumeTheme === 'modern'
+                  ? 'bg-blue-50/50 text-blue-900 border-blue-100'
+                  : 'bg-slate-50 text-slate-800 border-slate-200'
+              }`}>
                 {skill}
               </span>
             ))}
@@ -90,11 +95,12 @@ export function ResumeTemplate({ profile, app }: ResumeTemplateProps) {
           {profile.experience && profile.experience.length > 0 ? (
             profile.experience.map((exp) => (
               <div key={exp.id} className="mb-3 last:mb-0">
-                <div className="flex justify-between items-baseline">
-                  <h3 className="text-xs font-bold text-slate-800">{exp.role}</h3>
-                  <span className="text-[10px] font-semibold text-slate-500">{exp.startDate} - {exp.endDate}</span>
+                <div className="flex justify-between items-baseline mb-1">
+                  <div className="text-xs font-bold text-slate-800">
+                    {exp.role} <span className="text-slate-400 font-normal">at</span> <span className={`${colors.accent} font-semibold`}>{exp.company}</span>
+                  </div>
+                  <span className="text-[10px] font-semibold text-slate-500 font-mono">{exp.startDate} - {exp.endDate}</span>
                 </div>
-                <div className="text-[10.5px] font-semibold text-indigo-700 italic mb-1">{exp.company}</div>
                 <ul className="list-disc list-outside ml-4 text-[10px] text-slate-700 space-y-0.5">
                   {exp.description.split('\n').filter(Boolean).map((bullet, idx) => (
                     <li key={idx}>{bullet.replace(/^- /, '')}</li>
@@ -122,7 +128,7 @@ export function ResumeTemplate({ profile, app }: ResumeTemplateProps) {
                     )}
                   </div>
                   <span className="text-[9px] font-semibold text-slate-500 font-mono">
-                    {proj.technologies.slice(0, 5).join(' • ')}
+                    {proj.technologies.slice(0, 5).join(', ')}
                   </span>
                 </div>
                 <p className="text-[10px] text-slate-600 leading-relaxed mt-0.5">{proj.description}</p>
@@ -139,21 +145,17 @@ export function ResumeTemplate({ profile, app }: ResumeTemplateProps) {
             profile.education.map((edu) => (
               <div key={edu.id} className="mb-2 last:mb-0">
                 <div className="flex justify-between items-baseline">
-                  <h3 className="text-xs font-bold text-slate-800">{edu.degree}</h3>
-                  <span className="text-[10px] font-semibold text-slate-500">{edu.graduationDate}</span>
+                  <div className="text-xs font-bold text-slate-800">
+                    {edu.degree} <span className="text-slate-400 font-normal">from</span> <span className="text-slate-600 font-semibold">{edu.school}</span>
+                  </div>
+                  <span className="text-[10px] font-semibold text-slate-500 font-mono">{edu.graduationDate}</span>
                 </div>
-                <div className="text-[10.5px] font-semibold text-slate-600 italic">{edu.school}</div>
               </div>
             ))
           ) : (
             <p className="text-[10px] text-slate-400 italic">No education details listed.</p>
           )}
         </section>
-      </div>
-
-      <footer className="text-center text-[9px] text-slate-400 font-sans pt-2 border-t border-slate-100 mt-auto">
-        Generated by TalentFlow AI Career Suite
-      </footer>
     </div>
   );
 }

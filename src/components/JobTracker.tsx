@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useAppState } from '../state';
-import { ExternalLink, MoreVertical, ChevronDown, ChevronUp, FileDown, Loader2, X, Target, Sparkles, HelpCircle, Briefcase, Award, Bot, ArrowLeft, Send, Play, Terminal as TerminalIcon } from 'lucide-react';
+import { ExternalLink, MoreVertical, ChevronDown, ChevronUp, FileDown, Loader2, X, Target, Sparkles, HelpCircle, Briefcase, Award, Bot, ArrowLeft, Send, Play, Terminal as TerminalIcon, Maximize2, Search } from 'lucide-react';
 import type { JobApplication, ApplicationStatus, UserProfile, InterviewQuestion } from '../types';
 import { createPortal } from 'react-dom';
 import { ResumeTemplate } from './ResumeTemplate';
 import { CoverLetterTemplate } from './CoverLetterTemplate';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { gradeInterviewAnswer } from '../lib/gemini';
+import { AgentRunner } from './AgentRunner';
 
 const COLUMNS: { 
   id: ApplicationStatus; 
@@ -25,9 +26,14 @@ export function JobTracker() {
   const { applications, updateApplicationStatus, profile } = useAppState();
   const [selectedApp, setSelectedApp] = useState<JobApplication | null>(null);
   const [draggedOverColumn, setDraggedOverColumn] = useState<ApplicationStatus | null>(null);
+  const [expandedColumn, setExpandedColumn] = useState<ApplicationStatus | null>(null);
+  const [isRunnerOpen, setIsRunnerOpen] = useState(false);
 
   const getAppsByStatus = (status: ApplicationStatus) => 
     applications.filter(app => app.status === status);
+
+  const appsForExpandedColumn = expandedColumn ? getAppsByStatus(expandedColumn) : [];
+  const expandedColData = expandedColumn ? COLUMNS.find(c => c.id === expandedColumn) : null;
 
   // Sync details modal if active app changes status or details in state
   const activeApp = selectedApp 
@@ -36,9 +42,17 @@ export function JobTracker() {
 
   return (
     <div className="w-full h-full flex flex-col overflow-hidden bg-canvas">
-      <header className="px-12 py-8 bg-canvas border-b border-hairline-light shrink-0 text-left max-w-7xl mx-auto w-full">
-        <h1 className="text-display-md text-ink mb-2 font-semibold tracking-tight uppercase">Job Tracker</h1>
-        <p className="text-sm text-charcoal">Manage and track your automated applications. Click any card to view tailored assets.</p>
+      <header className="px-12 py-8 bg-canvas border-b border-hairline-light shrink-0 text-left max-w-7xl mx-auto w-full flex justify-between items-center">
+        <div>
+          <h1 className="text-display-md text-ink mb-2 font-semibold tracking-tight uppercase">Job Tracker</h1>
+          <p className="text-sm text-charcoal">Manage and track your automated applications. Click any card to view tailored assets.</p>
+        </div>
+        <button 
+          onClick={() => setIsRunnerOpen(true)}
+          className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-focus text-on-primary rounded-full text-sm font-semibold transition-colors border-none cursor-pointer"
+        >
+          <Bot className="w-4 h-4" /> Run AI Agent
+        </button>
       </header>
 
       <div 
@@ -76,8 +90,14 @@ export function JobTracker() {
                 }}
               >
                 {/* Column Header */}
-                <div className="px-5 py-4 border-b border-inherit flex justify-between items-center shrink-0">
-                  <h3 className="text-xs font-mono font-bold uppercase tracking-widest opacity-80">{col.label}</h3>
+                <div 
+                  onClick={() => setExpandedColumn(col.id)}
+                  className="px-5 py-4 border-b border-inherit flex justify-between items-center shrink-0 cursor-pointer hover:bg-surface-soft/30 transition-colors group/header"
+                >
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-mono font-bold uppercase tracking-widest opacity-80">{col.label}</h3>
+                    <Maximize2 className="w-3.5 h-3.5 text-mute opacity-0 group-hover/header:opacity-100 transition-opacity" />
+                  </div>
                   <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full ${col.badgeClass}`}>
                     {apps.length}
                   </span>
@@ -115,6 +135,25 @@ export function JobTracker() {
           onClose={() => setSelectedApp(null)} 
         />
       )}
+
+      {expandedColumn && expandedColData && (
+        <ExpandedColumnModal
+          column={expandedColData}
+          apps={appsForExpandedColumn}
+          onClose={() => setExpandedColumn(null)}
+          onSelectJob={(app) => setSelectedApp(app)}
+          updateApplicationStatus={updateApplicationStatus}
+        />
+      )}
+
+      {isRunnerOpen && createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-8 bg-canvas-dark/80 backdrop-blur-xs print:hidden">
+          <div className="bg-canvas-light w-full max-w-6xl h-[85vh] rounded-3xl border border-hairline-light flex flex-col overflow-hidden text-left shadow-2xl">
+            <AgentRunner isEmbedded={true} onClose={() => setIsRunnerOpen(false)} />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
@@ -140,6 +179,12 @@ function JobCard({ app, onStatusChange, onSelect, isDark, onDragEnd }: JobCardPr
   const textTitle = isDark ? 'text-on-dark' : 'text-ink';
   const textSub = isDark ? 'text-body-muted' : 'text-mute';
 
+  const menuBg = isDark 
+    ? 'bg-surface-elevated border-hairline-dark shadow-2xl' 
+    : 'bg-canvas border-hairline-light shadow-xl';
+  const menuItemHover = isDark ? 'hover:bg-white/5 hover:text-white' : 'hover:bg-surface-soft hover:text-ink';
+  const menuDivider = isDark ? 'border-white/10' : 'border-hairline-light';
+
   return (
     <div 
       onClick={handleCardClick}
@@ -148,7 +193,7 @@ function JobCard({ app, onStatusChange, onSelect, isDark, onDragEnd }: JobCardPr
         e.dataTransfer.setData('text/plain', app.id);
       }}
       onDragEnd={onDragEnd}
-      className={`w-full p-5 rounded-2xl border transition-all cursor-grab active:cursor-grabbing select-none text-left transform-gpu ${cardBg}`}
+      className={`w-full p-5 rounded-2xl border transition-all cursor-grab active:cursor-grabbing select-none text-left transform-gpu relative hover:z-20 hover:shadow-md ${cardBg}`}
     >
       <div className="flex justify-between items-start mb-1.5">
         <h4 className={`text-sm font-bold tracking-tight line-clamp-1 ${textTitle}`} title={app.role}>{app.role}</h4>
@@ -156,26 +201,26 @@ function JobCard({ app, onStatusChange, onSelect, isDark, onDragEnd }: JobCardPr
           <button className={`opacity-50 hover:opacity-100 transition-opacity ${textTitle}`}>
             <MoreVertical className="w-4 h-4" />
           </button>
-          <div className="absolute right-0 top-6 w-44 bg-canvas border border-hairline-light shadow-none rounded-xl hidden group-hover:block z-10 py-2">
+          <div className={`absolute right-0 top-6 w-44 border rounded-xl hidden group-hover:block z-10 py-2 ${menuBg}`}>
             <div className="px-4 py-2 text-[10px] font-mono text-mute uppercase tracking-wider">Move to</div>
             {COLUMNS.map(col => (
               <button
                 key={col.id}
                 disabled={app.status === col.id}
                 onClick={() => onStatusChange(col.id)}
-                className="w-full text-left px-4 py-2.5 text-xs text-ink hover:bg-surface-soft disabled:opacity-50 font-semibold transition-colors bg-transparent border-none"
+                className={`w-full text-left px-4 py-2.5 text-xs disabled:opacity-30 font-semibold transition-colors bg-transparent border-none ${isDark ? 'text-on-dark-mute' : 'text-ink'} ${menuItemHover}`}
               >
                 {col.label}
               </button>
             ))}
-            <div className="border-t border-hairline-light my-1.5"></div>
+            <div className={`border-t my-1.5 ${menuDivider}`}></div>
             <button
               onClick={() => {
                 if (confirm(`Are you sure you want to delete the "${app.role}" application at ${app.company}?`)) {
                   deleteApplication(app.id);
                 }
               }}
-              className="w-full text-left px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 font-semibold transition-colors bg-transparent border-none"
+              className={`w-full text-left px-4 py-2 text-xs text-rose-600 font-semibold transition-colors bg-transparent border-none ${isDark ? 'hover:bg-rose-950/30' : 'hover:bg-rose-50'}`}
             >
               Delete Job
             </button>
@@ -266,6 +311,21 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
     { category: 'Soft Skills', userScore: 85, jobDemandScore: 80 }
   ];
 
+  const sanitizeFilenamePart = (str: string) => {
+    return str
+      .replace(/[^a-zA-Z0-9]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  };
+
+  const getLocalDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const handleDownloadResume = () => {
     setIsGeneratingResume(true);
     setPrintProgress(0);
@@ -283,7 +343,21 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
       if (currentStep >= steps) {
         clearInterval(timer);
         setTimeout(() => {
+          const originalTitle = document.title;
+          const cleanCompany = sanitizeFilenamePart(app.company || 'Company');
+          const dateStr = getLocalDateString();
+          document.title = `${cleanCompany}_Resume_${dateStr}`;
+
+          const restoreTitle = () => {
+            document.title = originalTitle;
+            window.removeEventListener('afterprint', restoreTitle);
+          };
+          window.addEventListener('afterprint', restoreTitle);
+          
           window.print();
+          
+          setTimeout(restoreTitle, 500);
+
           setIsGeneratingResume(false);
           setPrintingType(null);
         }, 300);
@@ -308,7 +382,21 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
       if (currentStep >= steps) {
         clearInterval(timer);
         setTimeout(() => {
+          const originalTitle = document.title;
+          const cleanCompany = sanitizeFilenamePart(app.company || 'Company');
+          const dateStr = getLocalDateString();
+          document.title = `${cleanCompany}_CoverLetter_${dateStr}`;
+
+          const restoreTitle = () => {
+            document.title = originalTitle;
+            window.removeEventListener('afterprint', restoreTitle);
+          };
+          window.addEventListener('afterprint', restoreTitle);
+          
           window.print();
+          
+          setTimeout(restoreTitle, 500);
+
           setIsGeneratingCover(false);
           setPrintingType(null);
         }, 300);
@@ -756,6 +844,93 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
         </div>
       )}
     </div>
+  );
+}
+
+interface ExpandedColumnModalProps {
+  column: typeof COLUMNS[number];
+  apps: JobApplication[];
+  onClose: () => void;
+  onSelectJob: (app: JobApplication) => void;
+  updateApplicationStatus: (id: string, status: ApplicationStatus) => void;
+}
+
+function ExpandedColumnModal({ column, apps, onClose, onSelectJob, updateApplicationStatus }: ExpandedColumnModalProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredApps = apps.filter(app => 
+    app.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    app.company.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const isDark = column.theme === 'dark';
+
+  return createPortal(
+    <div className="fixed inset-0 z-45 flex items-center justify-center p-8 bg-canvas-dark/80 backdrop-blur-xs">
+      <div className="bg-canvas-light w-full max-w-6xl h-[85vh] rounded-3xl border border-hairline-light flex flex-col overflow-hidden text-left shadow-2xl">
+        {/* Header */}
+        <header className="px-10 py-6 border-b border-hairline-light flex justify-between items-center bg-canvas-light shrink-0">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full ${column.badgeClass}`}>
+                {apps.length}
+              </span>
+              <span className="text-xs text-mute font-mono">Status Column</span>
+            </div>
+            <h2 className="text-heading-lg text-ink font-semibold">{column.label} Applications</h2>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="p-2 border-none hover:bg-surface-soft rounded-full text-mute hover:text-ink transition-colors cursor-pointer"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </header>
+
+        {/* Search bar */}
+        <div className="px-10 py-4 border-b border-hairline-light bg-surface-soft/20 flex items-center gap-3 shrink-0">
+          <Search className="w-4 h-4 text-mute" />
+          <input
+            type="text"
+            placeholder="Search by role or company..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 bg-transparent border-none text-sm text-ink outline-none placeholder:text-stone"
+          />
+          {searchTerm && (
+            <button 
+              onClick={() => setSearchTerm('')}
+              className="text-xs text-mute hover:text-ink font-semibold bg-transparent border-none cursor-pointer"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-10 bg-surface-soft/10">
+          {filteredApps.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-sm text-mute italic py-12">
+              <Briefcase className="w-12 h-12 mb-3 opacity-30" />
+              {searchTerm ? 'No matching jobs found.' : 'No applications in this category.'}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredApps.map(app => (
+                <JobCard 
+                  key={app.id} 
+                  app={app} 
+                  onStatusChange={(newStatus) => updateApplicationStatus(app.id, newStatus)} 
+                  onSelect={() => onSelectJob(app)}
+                  isDark={isDark}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 

@@ -43,6 +43,67 @@ function jobScraperPlugin(): Plugin {
           }
           return;
         }
+
+        if (req.url?.startsWith('/api/llm')) {
+          if (req.method !== 'POST') {
+            res.statusCode = 405;
+            res.end(JSON.stringify({ error: 'Method Not Allowed' }));
+            return;
+          }
+          let body = '';
+          req.on('data', chunk => {
+            body += chunk;
+          });
+          req.on('end', async () => {
+            try {
+              const { model, messages, response_format } = JSON.parse(body);
+              
+              let apiKey = '';
+              const authHeader = req.headers.authorization;
+              if (authHeader && authHeader.startsWith('Bearer ')) {
+                apiKey = authHeader.substring(7).trim();
+              }
+              if (!apiKey) {
+                apiKey = process.env.DEEPSEEK_API_KEY || '';
+              }
+              if (!apiKey) {
+                res.statusCode = 401;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ error: 'DeepSeek API Key is missing. Please provide it in settings or environment variables.' }));
+                return;
+              }
+
+              const payload: any = {
+                model: model || 'deepseek-chat',
+                messages,
+                stream: false,
+              };
+              if (response_format) {
+                payload.response_format = response_format;
+              }
+
+              const response = await fetch('https://api.deepseek.com/chat/completions', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify(payload),
+              });
+
+              const data = await response.json();
+              res.statusCode = response.status;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(data));
+            } catch (err: any) {
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: err.message || 'Internal proxy error' }));
+            }
+          });
+          return;
+        }
+
         next();
       });
     }
