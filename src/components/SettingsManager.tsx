@@ -85,14 +85,14 @@ export function SettingsManager() {
   return (
     <div className="w-full h-full flex flex-col overflow-y-auto bg-canvas">
       <header className="px-12 py-8 bg-canvas border-b border-hairline-light shrink-0 text-left max-w-7xl mx-auto w-full">
-        <h1 className="text-display-md text-ink mb-2 font-semibold tracking-tight uppercase">System Settings</h1>
+        <h1 className="text-display-md text-ink mb-2 font-semibold tracking-[-1px] uppercase">System Settings</h1>
         <p className="text-sm text-charcoal">Configure runtime endpoints, autonomous agent rules, document formats, and backups.</p>
       </header>
 
       <div className="flex-1 max-w-4xl mx-auto w-full px-12 py-10 space-y-10 text-left">
         
         {/* Section 1: API Configuration */}
-        <section className="bg-canvas-light border border-hairline-light rounded-2xl p-8 relative">
+        <section className="bg-canvas-light border border-hairline-light rounded-lg p-8 relative shadow-product">
           <div className="flex items-center gap-3 mb-6">
             <Cpu className="w-5 h-5 text-primary" />
             <div>
@@ -110,7 +110,7 @@ export function SettingsManager() {
                   updateSettings({ activeProvider: e.target.value as 'gemini' | 'deepseek' });
                   triggerSuccessFeedback();
                 }}
-                className="w-full px-4 py-3 bg-surface-soft border border-hairline-light rounded-xl text-xs text-ink font-semibold focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
+                className="w-full h-10 px-4 bg-surface-soft border border-hairline-light rounded-md text-xs text-ink font-semibold focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
               >
                 <option value="gemini">Google Gemini</option>
                 <option value="deepseek">DeepSeek AI</option>
@@ -130,7 +130,7 @@ export function SettingsManager() {
                         updateSettings({ geminiApiKey: e.target.value });
                         triggerSuccessFeedback();
                       }}
-                      className="w-full pr-12 pl-4 py-3 bg-surface-soft border border-hairline-light rounded-xl font-mono text-xs text-ink focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                      className="w-full h-10 pr-12 pl-4 bg-surface-soft border border-hairline-light rounded-md font-mono text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
                     />
                     <button
                       type="button"
@@ -153,7 +153,7 @@ export function SettingsManager() {
                       updateSettings({ geminiModel: e.target.value });
                       triggerSuccessFeedback();
                     }}
-                    className="w-full px-4 py-3 bg-surface-soft border border-hairline-light rounded-xl text-xs text-ink font-semibold focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
+                    className="w-full h-10 px-4 bg-surface-soft border border-hairline-light rounded-md text-xs text-ink font-semibold focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
                   >
                     <option value="gemini-3.5-flash">Gemini 3.5 Flash (Super-fast, default)</option>
                     <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite (Most cost-efficient)</option>
@@ -174,7 +174,7 @@ export function SettingsManager() {
                         updateSettings({ deepseekApiKey: e.target.value });
                         triggerSuccessFeedback();
                       }}
-                      className="w-full pr-12 pl-4 py-3 bg-surface-soft border border-hairline-light rounded-xl font-mono text-xs text-ink focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                      className="w-full h-10 pr-12 pl-4 bg-surface-soft border border-hairline-light rounded-md font-mono text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
                     />
                     <button
                       type="button"
@@ -197,7 +197,7 @@ export function SettingsManager() {
                       updateSettings({ deepseekModel: e.target.value });
                       triggerSuccessFeedback();
                     }}
-                    className="w-full px-4 py-3 bg-surface-soft border border-hairline-light rounded-xl text-xs text-ink font-semibold focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
+                    className="w-full h-10 px-4 bg-surface-soft border border-hairline-light rounded-md text-xs text-ink font-semibold focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
                   >
                     <option value="deepseek-chat">DeepSeek Chat (V3 - Fast & Powerful)</option>
                   </select>
@@ -208,7 +208,7 @@ export function SettingsManager() {
         </section>
 
         {/* Section 2: Agent Runner Behaviors */}
-        <section className="bg-canvas-light border border-hairline-light rounded-2xl p-8">
+        <section className="bg-canvas-light border border-hairline-light rounded-lg p-8 shadow-product">
           <div className="flex items-center gap-3 mb-6">
             <Sliders className="w-5 h-5 text-primary" />
             <div>
@@ -263,7 +263,7 @@ export function SettingsManager() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-              <label className="flex items-start gap-3 p-4 border border-hairline-light rounded-xl hover:bg-surface-soft transition-colors cursor-pointer select-none">
+              <label className="flex items-start gap-3 p-4 border border-hairline-light rounded-lg hover:bg-surface-soft transition-colors cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={settings.autoOverwriteSkills}
@@ -279,7 +279,7 @@ export function SettingsManager() {
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-4 border border-hairline-light rounded-xl hover:bg-surface-soft transition-colors cursor-pointer select-none">
+              <label className="flex items-start gap-3 p-4 border border-hairline-light rounded-lg hover:bg-surface-soft transition-colors cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={settings.autoExtractLocation}
@@ -295,7 +295,7 @@ export function SettingsManager() {
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-4 border border-hairline-light rounded-xl hover:bg-surface-soft transition-colors cursor-pointer select-none">
+              <label className="flex items-start gap-3 p-4 border border-hairline-light rounded-lg hover:bg-surface-soft transition-colors cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={settings.autoSelectProjects}
@@ -315,7 +315,7 @@ export function SettingsManager() {
         </section>
 
         {/* Section 2.5: AI Email Sync Configuration */}
-        <section className="bg-canvas-light border border-hairline-light rounded-2xl p-8">
+        <section className="bg-canvas-light border border-hairline-light rounded-lg p-8 shadow-product">
           <div className="flex items-center gap-3 mb-6">
             <Bot className="w-5 h-5 text-primary" />
             <div>
@@ -333,7 +333,7 @@ export function SettingsManager() {
                   updateSettings({ emailProvider: e.target.value as 'mock' | 'imap' });
                   triggerSuccessFeedback();
                 }}
-                className="w-full px-4 py-3 bg-surface-soft border border-hairline-light rounded-xl text-xs text-ink font-semibold focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
+                className="w-full h-10 px-4 bg-surface-soft border border-hairline-light rounded-md text-xs text-ink font-semibold focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
               >
                 <option value="mock">Simulated Mode (Preloaded Demo Emails)</option>
                 <option value="imap">Real Gmail / IMAP Connection</option>
@@ -341,7 +341,7 @@ export function SettingsManager() {
             </div>
 
             {(settings.emailProvider === 'imap') && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-surface-soft rounded-xl border border-hairline-light">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-surface-soft rounded-lg border border-hairline-light">
                 <div className="md:col-span-2">
                   <span className="text-[10px] text-accent-danger font-mono font-bold uppercase tracking-wider block mb-1">Gmail / IMAP Instructions</span>
                   <p className="text-[10px] text-mute leading-relaxed">
@@ -358,7 +358,7 @@ export function SettingsManager() {
                       triggerSuccessFeedback();
                     }}
                     placeholder="imap.gmail.com"
-                    className="w-full px-4 py-3 bg-canvas border border-hairline-light rounded-xl font-mono text-xs text-ink focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                    className="w-full h-10 px-4 bg-canvas border border-hairline-light rounded-md font-mono text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
                   />
                 </div>
                 <div>
@@ -371,7 +371,7 @@ export function SettingsManager() {
                       triggerSuccessFeedback();
                     }}
                     placeholder="993"
-                    className="w-full px-4 py-3 bg-canvas border border-hairline-light rounded-xl font-mono text-xs text-ink focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                    className="w-full h-10 px-4 bg-canvas border border-hairline-light rounded-md font-mono text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
                   />
                 </div>
                 <div>
@@ -384,7 +384,7 @@ export function SettingsManager() {
                       triggerSuccessFeedback();
                     }}
                     placeholder="yourname@gmail.com"
-                    className="w-full px-4 py-3 bg-canvas border border-hairline-light rounded-xl font-mono text-xs text-ink focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                    className="w-full h-10 px-4 bg-canvas border border-hairline-light rounded-md font-mono text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
                   />
                 </div>
                 <div>
@@ -397,7 +397,7 @@ export function SettingsManager() {
                       triggerSuccessFeedback();
                     }}
                     placeholder="xxxx xxxx xxxx xxxx"
-                    className="w-full px-4 py-3 bg-canvas border border-hairline-light rounded-xl font-mono text-xs text-ink focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                    className="w-full h-10 px-4 bg-canvas border border-hairline-light rounded-md font-mono text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
                   />
                 </div>
               </div>
@@ -406,7 +406,7 @@ export function SettingsManager() {
         </section>
 
         {/* Section 3: Resume Constraints */}
-        <section className="bg-canvas-light border border-hairline-light rounded-2xl p-8">
+        <section className="bg-canvas-light border border-hairline-light rounded-lg p-8 shadow-product">
           <div className="flex items-center gap-3 mb-6">
             <FileText className="w-5 h-5 text-primary" />
             <div>
@@ -416,7 +416,7 @@ export function SettingsManager() {
           </div>
 
           <div className="space-y-6">
-            <label className="flex items-start gap-3 p-4 border border-hairline-light rounded-xl hover:bg-surface-soft transition-colors cursor-pointer select-none">
+            <label className="flex items-start gap-3 p-4 border border-hairline-light rounded-lg hover:bg-surface-soft transition-colors cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={settings.strictOnePage}
@@ -441,7 +441,7 @@ export function SettingsManager() {
                     updateSettings({ resumeTheme: e.target.value });
                     triggerSuccessFeedback();
                   }}
-                  className="w-full px-4 py-3 bg-surface-soft border border-hairline-light rounded-xl text-xs text-ink font-semibold focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
+                  className="w-full h-10 px-4 bg-surface-soft border border-hairline-light rounded-md text-xs text-ink font-semibold focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
                 >
                   <option value="cobalt">Cobalt Blue (Fintech Default)</option>
                   <option value="monochrome">Obsidian Black (Minimalist)</option>
@@ -457,7 +457,7 @@ export function SettingsManager() {
                     updateSettings({ resumeFont: e.target.value });
                     triggerSuccessFeedback();
                   }}
-                  className="w-full px-4 py-3 bg-surface-soft border border-hairline-light rounded-xl text-xs text-ink font-semibold focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
+                  className="w-full h-10 px-4 bg-surface-soft border border-hairline-light rounded-md text-xs text-ink font-semibold focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
                 >
                   <option value="sans">Modern Sans-Serif (Inter)</option>
                   <option value="serif">Classic Serif (Georgia)</option>
@@ -468,7 +468,7 @@ export function SettingsManager() {
         </section>
 
         {/* Section 4: AI Coach Simulator Configurations */}
-        <section className="bg-canvas-light border border-hairline-light rounded-2xl p-8">
+        <section className="bg-canvas-light border border-hairline-light rounded-lg p-8 shadow-product">
           <div className="flex items-center gap-3 mb-6">
             <Bot className="w-5 h-5 text-primary" />
             <div>
@@ -486,7 +486,7 @@ export function SettingsManager() {
                   updateSettings({ coachPersona: e.target.value });
                   triggerSuccessFeedback();
                 }}
-                className="w-full px-4 py-3 bg-surface-soft border border-hairline-light rounded-xl text-xs text-ink font-semibold focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
+                className="w-full h-10 px-4 bg-surface-soft border border-hairline-light rounded-md text-xs text-ink font-semibold focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
               >
                 <option value="star">STAR Methodology Coach (Default)</option>
                 <option value="recruiter">Senior HR Recruiter (Keyword & Branding)</option>
@@ -502,7 +502,7 @@ export function SettingsManager() {
                   updateSettings({ coachDifficulty: e.target.value });
                   triggerSuccessFeedback();
                 }}
-                className="w-full px-4 py-3 bg-surface-soft border border-hairline-light rounded-xl text-xs text-ink font-semibold focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
+                className="w-full h-10 px-4 bg-surface-soft border border-hairline-light rounded-md text-xs text-ink font-semibold focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
               >
                 <option value="strict">Strict & Critical (High-bar performance)</option>
                 <option value="encouraging">Constructive & Gentle (Lighter scoring)</option>
@@ -512,7 +512,7 @@ export function SettingsManager() {
         </section>
 
         {/* Section 5: Data management */}
-        <section className="bg-canvas-light border border-hairline-light rounded-2xl p-8 relative overflow-hidden">
+        <section className="bg-canvas-light border border-hairline-light rounded-lg p-8 relative overflow-hidden shadow-product">
           <div className="flex items-center gap-3 mb-6">
             <ShieldAlert className="w-5 h-5 text-accent-danger" />
             <div>
@@ -525,12 +525,12 @@ export function SettingsManager() {
             <button
               type="button"
               onClick={handleExportData}
-              className="flex items-center justify-center gap-2 p-4 border border-hairline-light rounded-xl hover:bg-surface-soft transition-colors font-semibold text-xs text-ink cursor-pointer bg-transparent"
+              className="flex items-center justify-center gap-2 h-10 border border-hairline-light rounded-md hover:bg-surface-soft transition-colors font-semibold text-xs text-ink cursor-pointer bg-transparent"
             >
               <Download className="w-4 h-4 text-mute" /> Export Workspace JSON
             </button>
 
-            <label className="flex items-center justify-center gap-2 p-4 border border-hairline-light rounded-xl hover:bg-surface-soft transition-colors font-semibold text-xs text-ink cursor-pointer bg-transparent text-center">
+            <label className="flex items-center justify-center gap-2 h-10 border border-hairline-light rounded-md hover:bg-surface-soft transition-colors font-semibold text-xs text-ink cursor-pointer bg-transparent text-center select-none">
               <Upload className="w-4 h-4 text-mute" /> Import Workspace JSON
               <input
                 type="file"
@@ -547,7 +547,7 @@ export function SettingsManager() {
 
           <div className="border-t border-hairline-light my-6"></div>
 
-          <div className="flex items-center justify-between p-4 bg-accent-danger/5 border border-accent-danger/20 rounded-xl">
+          <div className="flex items-center justify-between p-4 bg-accent-danger/5 border border-accent-danger/20 rounded-lg">
             <div className="text-left max-w-lg">
               <span className="text-xs font-bold text-accent-danger block">Danger Zone: Purge all local state</span>
               <span className="text-[10px] text-mute mt-0.5 block">Clear your LocalStorage parameters. This deletes tracked jobs, tailored profiles, and all settings.</span>
@@ -555,7 +555,7 @@ export function SettingsManager() {
             <button
               type="button"
               onClick={handleFactoryReset}
-              className="flex items-center gap-1.5 px-4 py-2 bg-accent-danger text-on-primary rounded-lg text-xs font-bold transition-all hover:bg-accent-danger/90 cursor-pointer border-none"
+              className="flex items-center gap-1.5 px-4 h-9 bg-accent-danger text-on-primary rounded-md text-xs font-bold transition-all hover:bg-accent-danger/90 cursor-pointer border-none"
             >
               <Trash2 className="w-4 h-4" /> Reset App
             </button>
@@ -564,15 +564,15 @@ export function SettingsManager() {
 
         {/* Global Save Indicator Alert */}
         {saveSuccess && (
-          <div className="fixed bottom-6 right-6 bg-canvas-dark text-on-dark px-5 py-3 rounded-full flex items-center gap-2 shadow-lg border border-hairline-dark animate-in fade-in slide-in-from-bottom-4 duration-300 z-50">
+          <div className="fixed bottom-6 right-6 bg-canvas-dark text-on-dark px-5 py-3 rounded-md flex items-center gap-2 shadow-lg border border-hairline-dark animate-in fade-in slide-in-from-bottom-4 duration-300 z-50">
             <CheckCircle2 className="w-4 h-4 text-accent-teal" />
             <span className="text-xs font-semibold uppercase tracking-wider font-mono">Settings autosaved</span>
           </div>
         )}
 
         {resetSuccess && (
-          <div className="fixed inset-0 bg-canvas/80 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-canvas-dark text-on-dark p-8 rounded-2xl border border-hairline-dark text-center max-w-sm">
+          <div className="fixed inset-0 bg-canvas/80 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
+            <div className="bg-canvas-dark text-on-dark p-8 rounded-lg border border-hairline-dark text-center max-w-sm">
               <Trash2 className="w-8 h-8 text-accent-danger mx-auto mb-4 animate-bounce" />
               <h4 className="text-sm font-bold uppercase tracking-wider">Application Resetting...</h4>
               <p className="text-xs text-on-dark-mute mt-2">Clearing cache and reloading state.</p>

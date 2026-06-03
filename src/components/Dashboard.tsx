@@ -1,9 +1,12 @@
 import React, { useMemo } from 'react';
 import { useAppState } from '../state';
 import { Target, CheckCircle2, RotateCw, Briefcase, TrendingUp } from 'lucide-react';
+import clsx from 'clsx';
+import type { ApplicationStatus } from '../types';
 
 export function Dashboard() {
   const { applications, setView, emailSuggestions } = useAppState();
+
   const pendingSuggestions = emailSuggestions.filter(s => s.status === 'pending');
 
   const stats = useMemo(() => {
@@ -15,135 +18,229 @@ export function Dashboard() {
     return { total, applied, interviewing, active };
   }, [applications]);
 
+  const getStatusPillColor = (status: ApplicationStatus) => {
+    switch (status) {
+      case 'offer': return 'bg-[#34d399]/15 text-[#059669] border-[#34d399]/20';
+      case 'interview': return 'bg-primary/10 text-primary border-primary/20';
+      case 'applied': return 'bg-blue-50 text-blue-600 border-blue-100';
+      case 'rejected': return 'bg-accent-danger/10 text-accent-danger border-accent-danger/20';
+      case 'ready': return 'bg-[#fb923c]/15 text-[#d97706] border-[#fb923c]/20';
+      default: return 'bg-slate-100 text-mute border-hairline-light';
+    }
+  };
+
   return (
-    <div className="w-full min-h-full flex flex-col bg-canvas-light">
-      {/* Header Tile */}
-      <div className="w-full px-12 py-20 bg-canvas-light text-left max-w-7xl mx-auto border-b border-hairline-light">
-        <h1 className="text-display-xl text-ink mb-4 font-semibold tracking-tight uppercase">TalentFlow</h1>
-        <p className="text-lead text-charcoal max-w-2xl">Monitor your autonomous application agents and active recruitment pipelines.</p>
+    <div className="w-full min-h-full flex flex-col bg-canvas text-left">
+      
+      {/* Editorial Header Band */}
+      <div className="w-full px-12 pt-24 pb-12 max-w-7xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="max-w-2xl">
+          <h1 className="text-display-lg text-ink font-semibold tracking-[-1.5px] uppercase">
+            Console
+          </h1>
+          <p className="text-body text-sm mt-3 leading-relaxed max-w-lg">
+            Monitor your autonomous application pipelines, analyze skill embeddings, and review recent matching alerts.
+          </p>
+        </div>
+        
+        {/* Top-Right Pill Action Group */}
+        <div className="flex items-center bg-surface-soft p-1 rounded-full border border-hairline-light shrink-0">
+          <button 
+            onClick={() => setView('tracker')}
+            className="px-4 py-2 text-xs font-semibold text-ink bg-white rounded-full shadow-product border-none outline-none cursor-pointer"
+          >
+            Job Tracker
+          </button>
+          <button 
+            onClick={() => setView('runner')}
+            className="px-4 py-2 text-xs font-semibold text-mute hover:text-ink bg-transparent rounded-full border-none outline-none cursor-pointer transition-colors"
+          >
+            Launch Agent
+          </button>
+        </div>
       </div>
 
-      {/* Email Suggestions Banner */}
+      {/* AI Email Scanner Alert Banner */}
       {pendingSuggestions.length > 0 && (
-        <div className="w-full bg-accent-teal/10 border-b border-accent-teal/20 py-4 px-12 shrink-0">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 text-left">
-            <div className="flex items-center gap-3">
-              <span className="flex h-2.5 w-2.5 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-teal opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent-teal"></span>
-              </span>
-              <p className="text-[11px] font-bold text-ink uppercase tracking-wider">
-                AI Email Sync found {pendingSuggestions.length} pending status suggestion(s)
-              </p>
+        <div className="mx-12 mb-8 bg-[#fb923c]/10 border border-[#fb923c]/25 rounded-lg p-5 flex items-center justify-between gap-4 max-w-7xl xl:mx-auto xl:w-[calc(100%-6rem)]">
+          <div className="flex items-center gap-3">
+            <span className="flex h-2.5 w-2.5 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#fb923c] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#fb923c]"></span>
+            </span>
+            <div>
+              <h4 className="text-xs font-bold text-ink uppercase tracking-wide">Pending Sync Recommendation</h4>
+              <p className="text-[11px] text-mute mt-0.5">AI Email Sync detected {pendingSuggestions.length} job status updates in your inbox.</p>
             </div>
-            <button 
-              onClick={() => setView('email-scan')}
-              className="bg-accent-teal text-on-dark px-4 py-1.5 rounded-full text-[9px] font-bold uppercase hover:bg-accent-teal/90 transition-all border-none outline-none cursor-pointer"
-            >
-              Review Updates &rarr;
-            </button>
           </div>
+          <button 
+            onClick={() => setView('email-scan')}
+            className="bg-primary hover:bg-primary-active text-on-primary px-4 py-2 rounded-md text-xs font-bold uppercase transition-all cursor-pointer border-none"
+          >
+            Review &rarr;
+          </button>
         </div>
       )}
 
-      {/* Stats Grid - Edge-to-Edge */}
-      <div className="w-full border-b border-hairline-light">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 bg-canvas-light max-w-7xl mx-auto">
-          <StatCard title="Total Tracked" value={stats.total} icon={Briefcase} trend="+3 this week" />
-          <StatCard title="Auto-Applied" value={stats.applied} icon={CheckCircle2} trend="85% success rate" />
-          <StatCard title="Active Processing" value={stats.active} icon={RotateCw} />
-          <StatCard title="Interviews" value={stats.interviewing} icon={Target} />
+      {/* Metrics Row (SaaS Style) */}
+      <div className="w-full px-12 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+          <StatCard title="Total Tracked" value={stats.total} icon={Briefcase} subtitle="Active pipeline jobs" />
+          <StatCard title="Auto-Applied" value={stats.applied} icon={CheckCircle2} subtitle="Scraped & tailored" />
+          <StatCard title="Processing" value={stats.active} icon={RotateCw} subtitle="Live scraper tasks" isPulsing={stats.active > 0} />
+          <StatCard title="Interviews" value={stats.interviewing} icon={Target} subtitle="Meetings scheduled" isMuted={stats.interviewing === 0} />
         </div>
       </div>
 
-      {/* Main Content Tiles */}
-      <div className="w-full border-b border-hairline-light">
-        <div className="grid grid-cols-1 lg:grid-cols-2 max-w-7xl mx-auto">
-          {/* Left Tile - Recent Activity */}
-          <div className="bg-canvas-light p-12 flex flex-col lg:border-r border-hairline-light">
-            <div className="flex items-center justify-between mb-12">
-              <h3 className="text-display-md text-ink font-semibold uppercase">Recent Activity</h3>
-              <button 
-                onClick={() => setView('tracker')}
-                className="bg-surface-soft hover:bg-faint text-ink px-6 py-2.5 rounded-full text-sm font-semibold transition-colors flex items-center gap-2"
-              >
-                View Pipeline &rarr;
-              </button>
-            </div>
-            <div className="space-y-0 border-t border-hairline-light">
-              {applications.slice(0, 5).map(app => (
-                <div key={app.id} className="flex items-center justify-between py-6 border-b border-hairline-light">
-                  <div className="flex flex-col">
-                    <span className="text-heading-sm text-ink font-semibold">{app.role}</span>
-                    <span className="text-body-sm text-mute">{app.company}</span>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    {app.matchScore && (
-                      <div className="flex flex-col items-end">
-                        <span className="text-[10px] uppercase tracking-wider font-mono text-stone">FAISS MATCH</span>
-                        <span className="text-base font-semibold text-ink">{app.matchScore}%</span>
+      {/* Main Grid Content */}
+      <div className="w-full px-12 pb-24">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto items-stretch">
+          
+          {/* Left Card: Recent Activity (Light Card) */}
+          <div className="lg:col-span-7 bg-surface-soft border border-hairline-light rounded-lg p-8 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-8 border-b border-hairline-light pb-4">
+                <h3 className="text-title-sm text-ink font-semibold uppercase tracking-wider">Recent Activity</h3>
+                <button 
+                  onClick={() => setView('tracker')}
+                  className="text-xs font-semibold text-ink underline hover:text-primary-active bg-transparent border-none cursor-pointer"
+                >
+                  View Tracker &rarr;
+                </button>
+              </div>
+
+              <div className="divide-y divide-hairline-light">
+                {applications.slice(0, 5).map(app => {
+                  const companyInitial = app.company ? app.company.charAt(0).toUpperCase() : 'J';
+                  const matchScore = app.matchScore || 75;
+                  
+                  return (
+                    <div key={app.id} className="flex items-center justify-between py-5 text-xs">
+                      <div className="flex items-center gap-4 min-w-0">
+                        {/* Company placeholder badge */}
+                        <div className="w-10 h-10 bg-white border border-hairline-light rounded-lg flex items-center justify-center font-bold text-ink shrink-0 text-sm">
+                          {companyInitial}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="block text-sm font-semibold text-ink truncate">{app.role}</span>
+                          <span className="block text-xs text-mute mt-0.5 truncate">{app.company}</span>
+                        </div>
                       </div>
-                    )}
-                    <span className="px-4 py-1.5 text-xs font-semibold bg-surface-soft text-ink rounded-full capitalize">
-                      {app.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {applications.length === 0 && (
-                <div className="text-center py-12 text-mute text-base">No applications tracked yet.</div>
-              )}
+
+                      <div className="flex items-center gap-4 shrink-0">
+                        {app.matchScore !== undefined && (
+                          <div className={clsx(
+                            "px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider font-mono",
+                            matchScore >= 80 
+                              ? "bg-accent-teal/10 text-accent-teal border-accent-teal/20"
+                              : "bg-accent-warning/10 text-accent-warning border-accent-warning/20"
+                          )}>
+                            {matchScore}% Match
+                          </div>
+                        )}
+                        <span className={clsx(
+                          "px-3 py-1 rounded-md border text-[10px] font-bold uppercase tracking-wider",
+                          getStatusPillColor(app.status)
+                        )}>
+                          {app.status}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+                {applications.length === 0 && (
+                  <div className="text-center py-12 text-mute text-xs">No active applications currently logged.</div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Right Tile - Vector DB Status (Dark) */}
-          <div className="bg-canvas-dark p-12 flex flex-col text-on-dark justify-between">
-            <div>
-              <h3 className="text-display-md mb-4 text-on-dark font-semibold uppercase">Vector DB</h3>
-              <p className="text-lead text-on-dark-mute mb-12">Local FAISS index for profile matching is healthy.</p>
+          {/* Right Card: Vector DB Console (Dark Card) */}
+          <div className="lg:col-span-5 bg-surface-dark text-on-dark rounded-lg p-8 flex flex-col justify-between">
+            <div className="space-y-6">
+              <div className="border-b border-surface-dark-elevated pb-4 flex items-center justify-between">
+                <h3 className="text-title-sm text-on-dark font-semibold uppercase tracking-wider font-mono">System Cache</h3>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase bg-[#34d399]/15 text-[#34d399]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent-teal animate-ping" />
+                  ● Active
+                </span>
+              </div>
               
-              <div className="space-y-6 font-mono text-sm tracking-wide">
-                <div className="flex justify-between border-b border-hairline-dark pb-4">
-                  <span className="text-on-dark-mute">Index Size</span>
-                  <span className="text-on-dark">12.4 MB</span>
+              <p className="text-on-dark-soft text-xs leading-relaxed font-sans">
+                The local FAISS vector store indexes your experiences, education history, and tailored resumes for contextual parsing.
+              </p>
+              
+              <div className="space-y-4 font-mono text-xs pt-4">
+                <div className="flex justify-between border-b border-surface-dark-elevated pb-3">
+                  <span className="text-on-dark-soft">Index Cache</span>
+                  <span className="text-on-dark font-semibold">12.4 MB</span>
                 </div>
-                <div className="flex justify-between border-b border-hairline-dark pb-4">
-                  <span className="text-on-dark-mute">Document Chunks</span>
-                  <span className="text-on-dark">2,408</span>
+                <div className="flex justify-between border-b border-surface-dark-elevated pb-3">
+                  <span className="text-on-dark-soft">Document Blocks</span>
+                  <span className="text-on-dark font-semibold">2,408 Chunks</span>
                 </div>
-                <div className="flex justify-between border-b border-hairline-dark pb-4">
-                  <span className="text-on-dark-mute">LLM Engine</span>
-                  <span className="text-on-dark text-accent-teal font-semibold">Active</span>
+                <div className="flex justify-between border-b border-surface-dark-elevated pb-3">
+                  <span className="text-on-dark-soft">FAISS Status</span>
+                  <span className="text-[#34d399] font-bold">Optimal</span>
                 </div>
               </div>
             </div>
 
-            <div className="pt-12">
+            <div className="pt-8">
               <button 
                 onClick={() => setView('runner')}
-                className="w-full bg-canvas-light hover:bg-faint text-canvas-dark py-4 rounded-full transition-colors flex items-center justify-center gap-3 text-base font-semibold uppercase"
+                className="w-full bg-white hover:bg-[#e5e7eb] text-ink py-3.5 rounded-md text-xs font-bold uppercase transition-all cursor-pointer border-none shadow-product"
               >
-                Launch Agent <TrendingUp className="w-5 h-5 text-canvas-dark" />
+                Deploy Scraper Agent
               </button>
             </div>
           </div>
+
         </div>
       </div>
+
+      {/* Dark Closing Footer */}
+      <footer className="bg-surface-dark text-on-dark-soft border-t border-surface-dark-elevated py-16 px-12 shrink-0">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-mono">
+          <div className="flex items-center gap-2">
+            <span className="font-display font-semibold text-on-dark text-sm">TalentFlow</span>
+            <span className="text-slate-700">|</span>
+            <span>AI Career Bureau</span>
+          </div>
+          <div>
+            System connection secure. Encrypted via TalentFlow-VPN. 2026.
+          </div>
+        </div>
+      </footer>
+
     </div>
   );
 }
 
-function StatCard({ title, value, icon: Icon, trend }: any) {
+function StatCard({ title, value, icon: Icon, subtitle, isPulsing = false, isMuted = false }: any) {
   return (
-    <div className="p-10 flex flex-col items-center justify-center text-center border-b md:border-b-0 border-r-0 md:border-r border-hairline-light last:border-r-0 hover:bg-surface-soft transition-colors">
-      <div className="flex items-center gap-2 mb-4 text-mute">
-        <Icon className="w-5 h-5" />
-        <h3 className="text-sm font-semibold tracking-wider uppercase font-mono">{title}</h3>
+    <div className="bg-surface-card border border-hairline-light rounded-lg p-6 flex flex-col justify-between h-40 text-left">
+      <div className="flex justify-between items-center text-mute">
+        <span className="text-[11px] font-bold uppercase tracking-wider font-sans">{title}</span>
+        <Icon className={clsx("w-4 h-4", isMuted ? "text-slate-300" : "text-ink")} />
       </div>
-      <div className="text-display-xl text-ink font-semibold">{value}</div>
-      {trend && (
-        <div className="mt-3 text-xs font-semibold text-accent-light-green bg-surface-soft px-3 py-1 rounded-full">{trend}</div>
-      )}
+      
+      <div className="flex items-baseline gap-2">
+        <span className={clsx(
+          "text-[40px] font-bold tracking-tight leading-none text-ink font-display",
+          isMuted && "text-slate-300"
+        )}>
+          {value}
+        </span>
+        {isPulsing && (
+          <span className="flex h-2.5 w-2.5 relative mb-1.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+          </span>
+        )}
+      </div>
+
+      <span className="text-[10px] text-mute font-mono uppercase tracking-wide">{subtitle}</span>
     </div>
   );
 }

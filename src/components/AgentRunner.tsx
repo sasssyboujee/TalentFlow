@@ -276,18 +276,18 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
       {/* Left Column: Form & Steps */}
       <div className="flex-1 p-12 lg:border-r border-b lg:border-b-0 border-hairline-light flex flex-col gap-12 bg-canvas-light text-left overflow-y-auto">
         <div className="w-full max-w-2xl">
-          <div className="flex bg-surface-soft p-1 rounded-full mb-8 max-w-sm">
+          <div className="flex bg-surface-soft p-1 rounded-md border border-hairline-light mb-8 max-w-sm">
             <button
               type="button"
               onClick={() => setInputMode('url')}
-              className={clsx("flex-1 py-2 text-xs font-semibold rounded-full transition-all", inputMode === 'url' ? "bg-canvas-light text-ink shadow-sm" : "text-mute hover:text-ink bg-transparent")}
+              className={clsx("flex-1 py-2 text-xs font-semibold rounded-md transition-all border-none cursor-pointer outline-none", inputMode === 'url' ? "bg-white text-ink shadow-product font-bold" : "text-mute hover:text-ink bg-transparent")}
             >
               <Link2 className="w-4 h-4 inline-block mr-1.5 align-text-bottom" /> Scrape URL
             </button>
             <button
               type="button"
               onClick={() => setInputMode('text')}
-              className={clsx("flex-1 py-2 text-xs font-semibold rounded-full transition-all", inputMode === 'text' ? "bg-canvas-light text-ink shadow-sm" : "text-mute hover:text-ink bg-transparent")}
+              className={clsx("flex-1 py-2 text-xs font-semibold rounded-md transition-all border-none cursor-pointer outline-none", inputMode === 'text' ? "bg-white text-ink shadow-product font-bold" : "text-mute hover:text-ink bg-transparent")}
             >
               <FileText className="w-4 h-4 inline-block mr-1.5 align-text-bottom" /> Paste JD
             </button>
@@ -304,9 +304,9 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
                   value={url}
                   onChange={e => setUrl(e.target.value)}
                   disabled={isRunning}
-                  className="w-full px-5 py-4 bg-canvas-light border border-hairline-light rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all disabled:opacity-50 text-ink placeholder:text-stone h-14"
+                  className="w-full px-4 py-2.5 bg-white border border-hairline-light rounded-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all disabled:opacity-50 text-ink placeholder:text-stone h-10 text-sm"
                 />
-                <p className="mt-3 text-xs text-mute">Note: Some job boards block automated scraping. If it fails, use the "Paste JD Text" option.</p>
+                <p className="mt-3 text-xs text-mute font-mono">Note: If scraping fails due to anti-bot protection, use "Paste JD" instead.</p>
               </div>
             ) : (
               <div className="mb-8">
@@ -318,12 +318,12 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
                   value={jdText}
                   onChange={e => setJdText(e.target.value)}
                   disabled={isRunning}
-                  className="w-full px-5 py-4 bg-canvas-light border border-hairline-light rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all disabled:opacity-50 resize-none text-ink placeholder:text-stone"
+                  className="w-full px-4 py-2.5 bg-white border border-hairline-light rounded-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all disabled:opacity-50 resize-none text-ink placeholder:text-stone text-sm"
                 />
               </div>
             )}
 
-            <div className="mb-6 flex items-start gap-3 p-4 border border-hairline-light rounded-xl hover:bg-surface-soft transition-colors cursor-pointer select-none">
+            <div className="mb-6 flex items-start gap-3 p-4 border border-hairline-light rounded-lg hover:bg-surface-soft transition-colors cursor-pointer select-none">
               <input
                 type="checkbox"
                 id="autoSelectProjects"
@@ -341,10 +341,10 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
             <button
               type="submit"
               disabled={isRunning || (inputMode === 'url' ? !url : !jdText)}
-              className="w-full bg-canvas-dark hover:bg-surface-elevated disabled:opacity-50 text-on-dark px-6 py-4 rounded-full font-semibold transition-colors flex items-center justify-center gap-2 text-base uppercase cursor-pointer"
+              className="w-full bg-primary hover:bg-primary-active disabled:opacity-50 text-on-primary px-5 py-2.5 rounded-md font-semibold transition-all flex items-center justify-center gap-2 text-sm uppercase cursor-pointer h-10 border-none shadow-product"
             >
-              {isRunning ? <Loader2 className="w-5 h-5 animate-spin" /> : <Terminal className="w-5 h-5" />}
-              {isRunning ? 'Running...' : 'Deploy Agent'}
+              {isRunning ? <Loader2 className="w-4 h-4 animate-spin text-current" /> : <Terminal className="w-4 h-4 text-current" />}
+              {isRunning ? 'Running...' : 'Deploy Scraper Agent'}
             </button>
           </form>
         </div>
@@ -400,25 +400,25 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
       </div>
 
       {/* Right Column: Terminal Logs (Dark Tile) */}
-      <div className="flex-1 bg-canvas-dark flex flex-col text-on-dark min-h-[500px]">
-        <div className="px-8 py-6 border-b border-hairline-dark flex items-center gap-3 shrink-0">
-          <Terminal className="w-5 h-5 text-on-dark-mute" />
-          <span className="text-sm font-mono text-on-dark-mute tracking-widest uppercase">agent-console</span>
+      <div className="flex-1 bg-surface-dark flex flex-col text-on-dark min-h-[500px]">
+        <div className="px-8 py-6 border-b border-surface-dark-elevated flex items-center gap-3 shrink-0">
+          <Terminal className="w-5 h-5 text-on-dark-soft" />
+          <span className="text-sm font-mono text-on-dark-soft tracking-widest uppercase">agent-console</span>
         </div>
         <div className="p-8 flex-1 overflow-y-auto font-mono text-[13px] leading-relaxed">
           {logs.length === 0 ? (
-            <div className="text-on-dark-mute italic">Waiting for command...</div>
+            <div className="text-on-dark-soft italic">Waiting for command...</div>
           ) : (
             <div className="space-y-4">
               {logs.map(log => (
                 <div key={log.id} className="flex items-start gap-4">
-                  <span className="text-ash shrink-0 select-none">[{log.timestamp}]</span>
+                  <span className="text-slate-600 shrink-0 select-none">[{log.timestamp}]</span>
                   <span className={clsx(
                     "break-words",
                     log.type === 'success' ? "text-accent-teal" :
                     log.type === 'warning' ? "text-accent-warning" :
                     log.type === 'error' ? "text-accent-danger" :
-                    "text-on-dark-mute"
+                    "text-on-dark-soft"
                   )}>
                     {log.message}
                   </span>

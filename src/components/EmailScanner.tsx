@@ -172,13 +172,13 @@ export function EmailScanner() {
       {/* Header */}
       <header className="px-12 py-8 bg-canvas border-b border-hairline-light shrink-0 text-left max-w-7xl mx-auto w-full flex justify-between items-center">
         <div>
-          <h1 className="text-display-md text-ink mb-2 font-semibold tracking-tight uppercase">AI Email Sync</h1>
+          <h1 className="text-display-md text-ink mb-2 font-semibold tracking-[-1px] uppercase">AI Email Sync</h1>
           <p className="text-sm text-charcoal">Scan your inbox to automatically surface job application updates.</p>
         </div>
         <button
           onClick={handleScanEmails}
           disabled={isScanning}
-          className="bg-canvas-dark hover:bg-surface-elevated text-on-dark px-6 py-3 rounded-full font-semibold transition-all flex items-center gap-2 cursor-pointer uppercase text-xs"
+          className="bg-canvas-dark hover:bg-surface-elevated text-on-dark px-5 py-2.5 rounded-md font-semibold transition-all flex items-center gap-2 cursor-pointer uppercase text-xs border-none shadow-product"
         >
           <RefreshCw className={clsx("w-4 h-4", isScanning && "animate-spin")} />
           {isScanning ? 'Syncing...' : 'Scan Inbox'}
@@ -207,7 +207,7 @@ export function EmailScanner() {
                   setSelectedSuggestionId(null);
                 }}
                 className={clsx(
-                  "flex-1 py-1.5 text-[10px] font-mono uppercase font-bold rounded-lg transition-colors border-none cursor-pointer",
+                  "flex-1 py-1.5 text-[10px] font-mono uppercase font-bold rounded-md transition-colors border-none cursor-pointer",
                   filterMode === mode ? "bg-canvas-dark text-on-dark" : "text-mute hover:text-ink hover:bg-surface-soft bg-transparent"
                 )}
               >
@@ -285,10 +285,10 @@ export function EmailScanner() {
           {selectedSuggestion ? (
             <div className="p-12 space-y-8 max-w-3xl">
               {/* Top Details */}
-              <div className="border border-hairline-light rounded-2xl p-6 bg-canvas flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="border border-hairline-light rounded-lg p-6 bg-canvas flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-product">
                 <div>
                   <span className="text-[10px] font-mono tracking-widest text-mute uppercase block mb-1">AI Recommendation</span>
-                  <h2 className="text-heading-lg font-bold text-ink">
+                  <h2 className="text-heading-lg font-bold text-ink tracking-[-0.5px]">
                     Update {selectedSuggestion.detectedCompany}
                   </h2>
                   <p className="text-xs text-charcoal mt-1">
@@ -308,7 +308,7 @@ export function EmailScanner() {
               </div>
 
               {/* Reasoning */}
-              <div className="bg-surface-soft rounded-2xl p-6 border border-hairline-light">
+              <div className="bg-surface-soft rounded-lg p-6 border border-hairline-light shadow-product">
                 <div className="flex items-center gap-2 text-ink font-bold text-xs mb-3">
                   <ShieldAlert className="w-4 h-4 text-primary" />
                   <span>AI MATCHING REASONING</span>
@@ -323,13 +323,13 @@ export function EmailScanner() {
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => handleAcceptSuggestion(selectedSuggestion)}
-                    className="flex-1 bg-accent-teal hover:bg-accent-teal/90 text-on-primary font-semibold py-3 rounded-full flex items-center justify-center gap-2 uppercase text-xs cursor-pointer border-none"
+                    className="flex-1 bg-primary hover:bg-primary-focus text-on-primary font-semibold py-3 rounded-md flex items-center justify-center gap-2 uppercase text-xs cursor-pointer border-none shadow-product"
                   >
                     <Check className="w-4 h-4" /> Accept Update Suggestion
                   </button>
                   <button
                     onClick={() => handleDismissSuggestion(selectedSuggestion.id)}
-                    className="flex-1 bg-transparent hover:bg-surface-soft text-mute hover:text-ink font-semibold py-3 border border-hairline-light rounded-full flex items-center justify-center gap-2 uppercase text-xs cursor-pointer"
+                    className="flex-1 bg-transparent hover:bg-surface-soft text-mute hover:text-ink font-semibold py-3 border border-hairline-light rounded-md flex items-center justify-center gap-2 uppercase text-xs cursor-pointer"
                   >
                     <X className="w-4 h-4" /> Dismiss Suggestion
                   </button>
@@ -337,19 +337,19 @@ export function EmailScanner() {
               )}
 
               {selectedSuggestion.status === 'applied' && (
-                <div className="flex items-center gap-2 p-4 bg-accent-teal/5 border border-accent-teal/20 text-accent-teal rounded-xl text-xs font-bold">
+                <div className="flex items-center gap-2 p-4 bg-accent-teal/5 border border-accent-teal/20 text-accent-teal rounded-md text-xs font-bold">
                   <Check className="w-4 h-4" /> Suggestion accepted and applied to Tracker!
                 </div>
               )}
 
               {selectedSuggestion.status === 'dismissed' && (
-                <div className="flex items-center gap-2 p-4 bg-stone/5 border border-stone/20 text-mute rounded-xl text-xs font-bold">
+                <div className="flex items-center gap-2 p-4 bg-stone/5 border border-stone/20 text-mute rounded-md text-xs font-bold">
                   <AlertCircle className="w-4 h-4" /> Suggestion dismissed.
                 </div>
               )}
 
               {/* Original Email */}
-              <div className="border border-hairline-light rounded-2xl overflow-hidden bg-canvas">
+              <div className="border border-hairline-light rounded-lg overflow-hidden bg-canvas shadow-product">
                 <div className="px-6 py-4 border-b border-hairline-light bg-surface-soft flex justify-between items-center">
                   <div className="flex items-center gap-2 text-ink">
                     <Mail className="w-4 h-4 text-mute" />
@@ -365,7 +365,7 @@ export function EmailScanner() {
                     <div><strong>Subject:</strong> {selectedSuggestion.subject}</div>
                   </div>
                   <div className="border-t border-hairline-light my-4"></div>
-                  <p className="text-xs text-charcoal leading-relaxed whitespace-pre-wrap font-mono bg-faint p-4 rounded-xl max-h-96 overflow-y-auto">
+                  <p className="text-xs text-charcoal leading-relaxed whitespace-pre-wrap font-mono bg-faint p-4 rounded-md max-h-96 overflow-y-auto border border-hairline-light">
                     {selectedSuggestion.bodySnippet}
                   </p>
                 </div>
