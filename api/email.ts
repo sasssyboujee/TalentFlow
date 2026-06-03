@@ -4,7 +4,21 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { provider, imapHost, imapPort, imapUser, imapPassword } = req.body || {};
+    const { provider, imapHost, imapPort, imapUser: reqUser, imapPassword: reqPassword } = req.body || {};
+    
+    let imapUser = reqUser || process.env.IMAP_USER || '';
+    let imapPassword = reqPassword || '';
+    
+    if (!imapPassword) {
+      if (!reqUser || reqUser === process.env.IMAP_USER) {
+        imapUser = process.env.IMAP_USER || '';
+        imapPassword = process.env.IMAP_PASSWORD || '';
+      } else if (reqUser === process.env.IMAP_USER_2) {
+        imapPassword = process.env.IMAP_PASSWORD_2 || '';
+      } else if (reqUser === process.env.IMAP_USER_3) {
+        imapPassword = process.env.IMAP_PASSWORD_3 || '';
+      }
+    }
 
     if (provider === 'mock') {
       const mockEmails = [

@@ -7,6 +7,8 @@ import { AgentRunner } from './components/AgentRunner';
 import { ProfileManager } from './components/ProfileManager';
 import { SettingsManager } from './components/SettingsManager';
 import { EmailScanner } from './components/EmailScanner';
+import { CalendarView } from './components/CalendarView';
+import { LinkedInOptimizer } from './components/LinkedInOptimizer';
 
 function AppContent() {
   const { view } = useAppState();
@@ -19,6 +21,8 @@ function AppContent() {
         {view === 'tracker' && <JobTracker />}
         {view === 'runner' && <AgentRunner />}
         {view === 'email-scan' && <EmailScanner />}
+        {view === 'calendar' && <CalendarView />}
+        {view === 'linkedin' && <LinkedInOptimizer />}
         {view === 'profile' && <ProfileManager />}
         {view === 'settings' && <SettingsManager />}
       </main>

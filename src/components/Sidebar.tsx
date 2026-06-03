@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppState } from '../state';
-import { LayoutDashboard, ListTodo, Bot, UserCircle, Settings, Mail, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Bot, UserCircle, Settings, Mail, Sun, Moon, Calendar, Compass } from 'lucide-react';
 import clsx from 'clsx';
 
 export function Sidebar() {
@@ -12,6 +12,8 @@ export function Sidebar() {
     { id: 'tracker', label: 'Job Tracker', icon: ListTodo },
     { id: 'runner', label: 'Agent Runner', icon: Bot },
     { id: 'email-scan', label: 'AI Email Sync', icon: Mail },
+    { id: 'calendar', label: 'Interview Schedule', icon: Calendar },
+    { id: 'linkedin', label: 'LinkedIn Optimizer', icon: Compass },
     { id: 'profile', label: 'My Data Profile', icon: UserCircle },
   ] as const;
 

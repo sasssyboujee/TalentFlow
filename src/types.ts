@@ -51,6 +51,8 @@ export interface JobApplication {
   skillCategories?: SkillCategoryScore[];
   agentLogs?: AgentLog[];
   emailVerified?: boolean;
+  interviewDate?: string | null;
+  interviewLocation?: string | null;
 }
 
 export interface AgentLog {
@@ -106,6 +108,16 @@ export interface SystemSettings {
   imapPassword?: string;
   lastEmailScanTime?: string;
   darkMode: boolean;
+  imapAccounts?: ImapAccount[];
+}
+
+export interface ImapAccount {
+  id: string;
+  label: string;
+  host: string;
+  port: number;
+  user: string;
+  password?: string;
 }
 
 export interface EmailSuggestion {
@@ -120,7 +132,9 @@ export interface EmailSuggestion {
   reason: string;
   status: 'pending' | 'applied' | 'dismissed';
   emailId: string;
+  matchedJobId?: string | null;
+  detectedDate?: string | null;
 }
 
-export type ViewState = 'dashboard' | 'runner' | 'tracker' | 'profile' | 'settings' | 'email-scan';
+export type ViewState = 'dashboard' | 'runner' | 'tracker' | 'profile' | 'settings' | 'email-scan' | 'calendar' | 'linkedin';
 

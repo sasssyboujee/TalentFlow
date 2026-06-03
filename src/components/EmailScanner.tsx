@@ -30,49 +30,128 @@ export function EmailScanner() {
 
   const handleScanEmails = async () => {
     setIsScanning(true);
-    setScanStatus('Connecting to server...');
+    
+    // Build list of accounts to scan
+    const accountsToScan = [];
+    
+    // Add primary account if configured
+    if (settings.imapUser) {
+      accountsToScan.push({
+        label: 'Primary Mailbox',
+        host: settings.imapHost,
+        port: settings.imapPort,
+        user: settings.imapUser,
+        password: settings.imapPassword,
+      });
+    }
+    
+    // Add secondary accounts
+    if (settings.imapAccounts && settings.imapAccounts.length > 0) {
+      settings.imapAccounts.forEach(acc => {
+        accountsToScan.push({
+          label: acc.label || 'Secondary Mailbox',
+          host: acc.host,
+          port: acc.port,
+          user: acc.user,
+          password: acc.password,
+        });
+      });
+    }
+
+    if (accountsToScan.length === 0 && settings.emailProvider === 'imap') {
+      setScanStatus('Error: No IMAP mailboxes configured in Settings.');
+      setTimeout(() => {
+        setIsScanning(false);
+        setScanStatus('');
+      }, 3000);
+      return;
+    }
+
+    let allRawEmails: any[] = [];
+    const scanErrors: string[] = [];
 
     try {
-      const payload = {
-        provider: settings.emailProvider,
-        imapHost: settings.imapHost,
-        imapPort: settings.imapPort,
-        imapUser: settings.imapUser,
-        imapPassword: settings.imapPassword,
-      };
+      if (settings.emailProvider === 'mock') {
+        setScanStatus('Connecting to server...');
+        const res = await fetch('/api/email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider: 'mock' }),
+        });
+        if (!res.ok) throw new Error('Mock service failed');
+        const data = await res.json();
+        allRawEmails = data.emails || [];
+      } else {
+        // Iterate through all accounts
+        for (let i = 0; i < accountsToScan.length; i++) {
+          const acc = accountsToScan[i];
+          setScanStatus(`Scanning ${acc.label} (${acc.user})...`);
+          
+          try {
+            const res = await fetch('/api/email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                provider: 'imap',
+                imapHost: acc.host,
+                imapPort: acc.port,
+                imapUser: acc.user,
+                imapPassword: acc.password,
+              }),
+            });
 
-      const res = await fetch('/api/email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+            if (!res.ok) {
+              const errorData = await res.json().catch(() => ({}));
+              throw new Error(errorData.error || `Server returned ${res.status}`);
+            }
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `Server returned ${res.status}`);
+            const data = await res.json();
+            const emails = data.emails || [];
+            allRawEmails = [...allRawEmails, ...emails];
+          } catch (accErr: any) {
+            console.error(`Error scanning account ${acc.user}:`, accErr);
+            scanErrors.push(`${acc.label}: ${accErr.message || 'Connection failed'}`);
+          }
+        }
       }
 
-      setScanStatus('Parsing emails and applying privacy filters...');
-      const data = await res.json();
-      const rawEmails = data.emails || [];
+      // Deduplicate emails by ID
+      const uniqueEmailsMap = new Map();
+      allRawEmails.forEach(e => {
+        uniqueEmailsMap.set(e.id, e);
+      });
+      const deduplicatedEmails = Array.from(uniqueEmailsMap.values());
 
-      if (rawEmails.length === 0) {
-        setScanStatus('No recruitment-related emails found in the scanned range.');
-        setTimeout(() => setIsScanning(false), 2000);
+      if (deduplicatedEmails.length === 0) {
+        if (scanErrors.length > 0) {
+          setScanStatus(`Scan failed: ${scanErrors.join(', ')}`);
+        } else {
+          setScanStatus('No recruitment-related emails found in the scanned range.');
+        }
+        setTimeout(() => {
+          setIsScanning(false);
+          setScanStatus('');
+        }, 4000);
         return;
       }
 
-      setScanStatus(`Analyzing ${rawEmails.length} filtered email(s) with ${settings.activeProvider === 'deepseek' ? 'DeepSeek' : 'Gemini'}...`);
-      const aiResult = await analyzeEmailsWithAI(rawEmails);
+      setScanStatus('Parsing emails and applying privacy filters...');
+      
+      const existingJobs = applications.map(app => ({
+        id: app.id,
+        company: app.company,
+        role: app.role
+      }));
+
+      setScanStatus(`Analyzing ${deduplicatedEmails.length} filtered email(s) with ${settings.activeProvider === 'deepseek' ? 'DeepSeek' : 'Gemini'}...${scanErrors.length > 0 ? ` (Errors in ${scanErrors.length} mailbox(es))` : ''}`);
+      const aiResult = await analyzeEmailsWithAI(deduplicatedEmails, existingJobs);
       
       const newSuggestions: EmailSuggestion[] = [];
 
       aiResult.suggestions.forEach(suggestion => {
         if (suggestion.suggestedStatus === 'unknown') return;
 
-        const originalEmail = rawEmails.find((e: any) => e.id === suggestion.emailId);
+        const originalEmail = deduplicatedEmails.find((e: any) => e.id === suggestion.emailId);
         if (!originalEmail) return;
 
         // Check if suggestion already exists
@@ -91,17 +170,23 @@ export function EmailScanner() {
           suggestedStatus: suggestion.suggestedStatus,
           reason: suggestion.reason,
           status: 'pending',
+          matchedJobId: suggestion.matchedJobId || null,
+          detectedDate: suggestion.detectedDate || null,
         });
       });
 
       if (newSuggestions.length > 0) {
         saveSuggestions([...newSuggestions, ...emailSuggestions]);
-        setScanStatus(`Scan complete. Found ${newSuggestions.length} new suggestion(s)!`);
+        setScanStatus(`Scan complete. Found ${newSuggestions.length} new suggestion(s)!${scanErrors.length > 0 ? ` Note: some mailboxes had errors: ${scanErrors.join(', ')}` : ''}`);
         if (newSuggestions.length > 0) {
           setSelectedSuggestionId(newSuggestions[0].id);
         }
       } else {
-        setScanStatus('Scan complete. No new status suggestions found.');
+        if (scanErrors.length > 0) {
+          setScanStatus(`Scan complete. No suggestions. Note: errors in ${scanErrors.join(', ')}`);
+        } else {
+          setScanStatus('Scan complete. No new status suggestions found.');
+        }
       }
     } catch (err: any) {
       console.error(err);
@@ -110,22 +195,31 @@ export function EmailScanner() {
       setTimeout(() => {
         setIsScanning(false);
         setScanStatus('');
-      }, 3000);
+      }, 4000);
     }
   };
 
   const handleAcceptSuggestion = (suggestion: EmailSuggestion) => {
     // Try to find matching job application
-    const matchedJob = applications.find(app => 
-      app.company.toLowerCase().includes(suggestion.detectedCompany.toLowerCase()) ||
-      suggestion.detectedCompany.toLowerCase().includes(app.company.toLowerCase())
-    );
+    let matchedJob = null;
+    if (suggestion.matchedJobId) {
+      matchedJob = applications.find(app => app.id === suggestion.matchedJobId);
+    }
+    
+    // Fallback to substring matching if ID search didn't find a match
+    if (!matchedJob) {
+      matchedJob = applications.find(app => 
+        app.company.toLowerCase().includes(suggestion.detectedCompany.toLowerCase()) ||
+        suggestion.detectedCompany.toLowerCase().includes(app.company.toLowerCase())
+      );
+    }
 
     if (matchedJob) {
       // Update existing application
       updateApplicationDetails(matchedJob.id, {
         status: suggestion.suggestedStatus as ApplicationStatus,
-        emailVerified: true
+        emailVerified: true,
+        interviewDate: suggestion.detectedDate || matchedJob.interviewDate
       });
     } else {
       // Create a new application in tracker
@@ -137,6 +231,7 @@ export function EmailScanner() {
         status: suggestion.suggestedStatus as ApplicationStatus,
         dateAdded: new Date().toISOString(),
         emailVerified: true,
+        interviewDate: suggestion.detectedDate || null,
       };
       addApplication(newApp);
     }
@@ -299,6 +394,11 @@ export function EmailScanner() {
                   <p className="text-xs text-charcoal mt-1">
                     Detected position: <strong className="text-ink">{selectedSuggestion.detectedRole || 'Unknown Role'}</strong>
                   </p>
+                  {selectedSuggestion.detectedDate && (
+                    <p className="text-xs text-charcoal mt-1">
+                      Detected date: <strong className="text-primary">{selectedSuggestion.detectedDate}</strong>
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">

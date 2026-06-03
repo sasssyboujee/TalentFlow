@@ -397,16 +397,29 @@ export interface EmailAnalysisResult {
     detectedRole: string;
     suggestedStatus: 'applied' | 'interview' | 'rejected' | 'offer' | 'unknown';
     reason: string;
+    matchedJobId?: string | null;
+    detectedDate?: string | null;
   }[];
 }
 
 export async function analyzeEmailsWithAI(
-  emails: { id: string; subject: string; from: string; date: string; body: string }[]
+  emails: { id: string; subject: string; from: string; date: string; body: string }[],
+  existingJobs?: { id: string; company: string; role: string }[]
 ): Promise<EmailAnalysisResult> {
   if (emails.length === 0) return { suggestions: [] };
 
+  const jobsContext = existingJobs && existingJobs.length > 0
+    ? `\nEXISTING TRACKED JOBS IN DATABASE:
+${existingJobs.map(job => `- ID: "${job.id}", Company: "${job.company}", Role: "${job.role}"`).join('\n')}
+
+INSTRUCTIONS FOR COMPANY MATCHING:
+If an email is related to one of the existing tracked jobs above (even if the company name or role is slightly differently phrased, e.g. "Google LLC" or "Google Careers" matches "Google"), you MUST use the EXACT "company" name (and "detectedRole") from the tracked list above and set "matchedJobId" to the corresponding ID.
+If it is a completely new company or role not in the list, set "matchedJobId" to null.`
+    : '';
+
   const prompt = `
 You are an expert recruitment assistant analyzing a list of candidate emails. For each email, determine if it is related to a job application status update and extract the relevant metadata.
+${jobsContext}
 
 EMAILS TO ANALYZE:
 ${emails.map((email, idx) => `
@@ -425,9 +438,11 @@ INSTRUCTIONS:
    - Rejection (e.g. "not moving forward at this time", "will not be proceeding", "unsuccessful"): suggest "rejected".
    - Job Offer (e.g. "offer of employment", "pleased to offer you", "your offer letter"): suggest "offer".
    - Unrelated or cannot determine: suggest "unknown".
-2. Extract the "detectedCompany" name and "detectedRole" title. Be precise.
+2. Extract the "detectedCompany" name and "detectedRole" title. Be precise. If matched to an existing tracked job, use the exact name from the tracked list.
 3. Write a concise 1-sentence "reason" summarizing the email's content (e.g., "Google sent an application confirmation email.").
-4. Return a JSON object with a "suggestions" array matching the schema below.
+4. If an existing job matches, set "matchedJobId" to its ID. Otherwise, set it to null.
+5. If the email contains a scheduled interview date, time, or call details, extract it into "detectedDate" (as a ISO 8601 string or clear readable timestamp like "2026-06-09T14:00:00Z" or "Tuesday, June 9 at 2:00 PM"). If not found, set "detectedDate" to null.
+6. Return a JSON object with a "suggestions" array matching the schema below.
 
 Output MUST be valid JSON matching this schema:
 {
@@ -437,7 +452,9 @@ Output MUST be valid JSON matching this schema:
       "detectedCompany": "string",
       "detectedRole": "string",
       "suggestedStatus": "applied" | "interview" | "rejected" | "offer" | "unknown",
-      "reason": "string"
+      "reason": "string",
+      "matchedJobId": "string" | null,
+      "detectedDate": "string" | null
     }
   ]
 }
@@ -448,6 +465,66 @@ Output MUST be valid JSON matching this schema:
     return JSON.parse(responseText) as EmailAnalysisResult;
   } catch (error: any) {
     console.error('Error analyzing emails with AI:', error);
+    throw error;
+  }
+}
+
+export interface LinkedInOptimizationResult {
+  headline: string;
+  about: string;
+  skills: string[];
+  experienceSuggestions: {
+    company: string;
+    role: string;
+    before: string;
+    after: string;
+  }[];
+}
+
+export async function optimizeProfileForLinkedIn(
+  profile: UserProfile,
+  targetRoles: string
+): Promise<LinkedInOptimizationResult> {
+  const prompt = `
+You are an expert LinkedIn SEO specialist and executive copywriter. Your task is to analyze the provided User Profile and target roles/keywords, and then generate optimized LinkedIn profile content.
+
+USER PROFILE:
+Name: ${profile.name}
+Summary: ${profile.summary}
+Skills: ${profile.skills.join(', ')}
+Experience:
+${profile.experience?.map(e => `- ${e.role} at ${e.company}: ${e.description}`).join('\n')}
+
+TARGET ROLES / KEYWORDS:
+${targetRoles}
+
+INSTRUCTIONS:
+1. Generate an optimized "headline" (under 220 characters). It should be search-friendly, high-impact, separating titles and skills using "|" or "•".
+2. Generate an optimized "about" section (3-4 short paragraphs, roughly 200-300 words). Make it engaging, written in the first person. Include a structured "Core Expertise" bullet-list highlighting their top skills/keywords.
+3. Select up to 10 key "skills" that align with the target roles and user's strengths.
+4. Review the experience descriptions, and suggest rewritten versions for the top 2 roles. For each, output the "company" name, "role" title, the original description ("before"), and the optimized, impact-driven description ("after") using bullet points with metrics where possible.
+
+Output MUST be valid JSON matching this schema:
+{
+  "headline": "string",
+  "about": "string",
+  "skills": ["string"],
+  "experienceSuggestions": [
+    {
+      "company": "string",
+      "role": "string",
+      "before": "string",
+      "after": "string"
+    }
+  ]
+}
+`;
+
+  try {
+    const responseText = await generateLLMResponse(prompt);
+    return JSON.parse(responseText) as LinkedInOptimizationResult;
+  } catch (error: any) {
+    console.error('Error optimizing LinkedIn profile:', error);
     throw error;
   }
 }

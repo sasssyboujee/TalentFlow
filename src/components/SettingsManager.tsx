@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppState } from '../state';
-import { Key, Eye, EyeOff, ShieldAlert, Cpu, Sliders, FileText, Bot, Download, Upload, Trash2, CheckCircle2 } from 'lucide-react';
+import { Key, Eye, EyeOff, ShieldAlert, Cpu, Sliders, FileText, Bot, Download, Upload, Trash2, CheckCircle2, Plus, Mail } from 'lucide-react';
 
 export function SettingsManager() {
   const { settings, updateSettings, profile, setProfile, applications, addApplication } = useAppState();
@@ -9,6 +9,46 @@ export function SettingsManager() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
   const [importError, setImportError] = useState('');
+  const [newAccount, setNewAccount] = useState({
+    label: '',
+    host: '',
+    port: 993,
+    user: '',
+    password: ''
+  });
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  const handleAddAccount = () => {
+    if (!newAccount.label || !newAccount.host || !newAccount.user) {
+      alert("Please fill in Label, Host, and Email Address.");
+      return;
+    }
+    const accounts = settings.imapAccounts || [];
+    const accountToAdd = {
+      ...newAccount,
+      id: `acc-${Date.now()}`
+    };
+    updateSettings({
+      imapAccounts: [...accounts, accountToAdd]
+    });
+    setNewAccount({
+      label: '',
+      host: '',
+      port: 993,
+      user: '',
+      password: ''
+    });
+    setShowAddForm(false);
+    triggerSuccessFeedback();
+  };
+
+  const handleDeleteAccount = (id: string) => {
+    const accounts = settings.imapAccounts || [];
+    updateSettings({
+      imapAccounts: accounts.filter(acc => acc.id !== id)
+    });
+    triggerSuccessFeedback();
+  };
 
   const triggerSuccessFeedback = () => {
     setSaveSuccess(true);
@@ -341,64 +381,192 @@ export function SettingsManager() {
             </div>
 
             {(settings.emailProvider === 'imap') && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-surface-soft rounded-lg border border-hairline-light">
-                <div className="md:col-span-2">
-                  <span className="text-[10px] text-accent-danger font-mono font-bold uppercase tracking-wider block mb-1">Gmail / IMAP Instructions</span>
-                  <p className="text-[10px] text-mute leading-relaxed">
-                    For Gmail, you <strong>must</strong> generate a 16-character <strong>App Password</strong> in your Google Account security settings. Never enter your main account password. The connection operates in read-only mode to prevent any modification to your inbox.
-                  </p>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-surface-soft rounded-lg border border-hairline-light">
+                  <div className="md:col-span-2">
+                    <span className="text-[10px] text-accent-danger font-mono font-bold uppercase tracking-wider block mb-1">Primary Email / IMAP Account</span>
+                    <p className="text-[10px] text-mute leading-relaxed">
+                      Configure your primary email mailbox. For Gmail, you <strong>must</strong> generate a 16-character <strong>App Password</strong> in your Google Account security settings. Never enter your main account password.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">IMAP Host</label>
+                    <input
+                      type="text"
+                      value={settings.imapHost || ''}
+                      onChange={(e) => {
+                        updateSettings({ imapHost: e.target.value });
+                        triggerSuccessFeedback();
+                      }}
+                      placeholder="imap.gmail.com"
+                      className="w-full h-10 px-4 bg-canvas border border-hairline-light rounded-md font-mono text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">IMAP Port</label>
+                    <input
+                      type="number"
+                      value={settings.imapPort || 993}
+                      onChange={(e) => {
+                        updateSettings({ imapPort: parseInt(e.target.value) || 993 });
+                        triggerSuccessFeedback();
+                      }}
+                      placeholder="993"
+                      className="w-full h-10 px-4 bg-canvas border border-hairline-light rounded-md font-mono text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">Email Address</label>
+                    <input
+                      type="email"
+                      value={settings.imapUser || ''}
+                      onChange={(e) => {
+                        updateSettings({ imapUser: e.target.value });
+                        triggerSuccessFeedback();
+                      }}
+                      placeholder="yourname@gmail.com"
+                      className="w-full h-10 px-4 bg-canvas border border-hairline-light rounded-md font-mono text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">App Password</label>
+                    <input
+                      type="password"
+                      value={settings.imapPassword || ''}
+                      onChange={(e) => {
+                        updateSettings({ imapPassword: e.target.value });
+                        triggerSuccessFeedback();
+                      }}
+                      placeholder="xxxx xxxx xxxx xxxx"
+                      className="w-full h-10 px-4 bg-canvas border border-hairline-light rounded-md font-mono text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">IMAP Host</label>
-                  <input
-                    type="text"
-                    value={settings.imapHost || ''}
-                    onChange={(e) => {
-                      updateSettings({ imapHost: e.target.value });
-                      triggerSuccessFeedback();
-                    }}
-                    placeholder="imap.gmail.com"
-                    className="w-full h-10 px-4 bg-canvas border border-hairline-light rounded-md font-mono text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">IMAP Port</label>
-                  <input
-                    type="number"
-                    value={settings.imapPort || 993}
-                    onChange={(e) => {
-                      updateSettings({ imapPort: parseInt(e.target.value) || 993 });
-                      triggerSuccessFeedback();
-                    }}
-                    placeholder="993"
-                    className="w-full h-10 px-4 bg-canvas border border-hairline-light rounded-md font-mono text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">Email Address</label>
-                  <input
-                    type="email"
-                    value={settings.imapUser || ''}
-                    onChange={(e) => {
-                      updateSettings({ imapUser: e.target.value });
-                      triggerSuccessFeedback();
-                    }}
-                    placeholder="yourname@gmail.com"
-                    className="w-full h-10 px-4 bg-canvas border border-hairline-light rounded-md font-mono text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">App Password</label>
-                  <input
-                    type="password"
-                    value={settings.imapPassword || ''}
-                    onChange={(e) => {
-                      updateSettings({ imapPassword: e.target.value });
-                      triggerSuccessFeedback();
-                    }}
-                    placeholder="xxxx xxxx xxxx xxxx"
-                    className="w-full h-10 px-4 bg-canvas border border-hairline-light rounded-md font-mono text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
-                  />
+
+                {/* Secondary Mailboxes */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center border-t border-hairline-light pt-6">
+                    <div>
+                      <h4 className="text-sm font-bold text-ink">Secondary Mailboxes</h4>
+                      <p className="text-[10px] text-mute mt-0.5">Scan multiple inboxes (e.g. iCloud, Outlook) for status updates.</p>
+                    </div>
+                    {!showAddForm && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAddForm(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-canvas border border-hairline-light rounded-md text-[10px] font-bold uppercase tracking-wider text-ink hover:bg-surface-soft transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add Mailbox
+                      </button>
+                    )}
+                  </div>
+
+                  {/* List of current secondary accounts */}
+                  {settings.imapAccounts && settings.imapAccounts.length > 0 ? (
+                    <div className="space-y-3">
+                      {settings.imapAccounts.map(acc => (
+                        <div key={acc.id} className="flex justify-between items-center p-4 bg-canvas border border-hairline-light rounded-lg shadow-product">
+                          <div className="flex items-center gap-3">
+                            <Mail className="w-4 h-4 text-mute" />
+                            <div>
+                              <span className="text-xs font-bold text-ink">{acc.label} <span className="text-[10px] text-mute font-normal font-mono">({acc.host}:{acc.port})</span></span>
+                              <span className="text-[10px] text-mute block font-mono">{acc.user}</span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAccount(acc.id)}
+                            className="p-1.5 hover:bg-accent-danger/5 hover:text-accent-danger text-mute rounded-md transition-colors border-none bg-transparent cursor-pointer"
+                            title="Remove mailbox"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-mute italic">No secondary mailboxes configured.</p>
+                  )}
+
+                  {/* Add New Mailbox Form */}
+                  {showAddForm && (
+                    <div className="p-4 bg-surface-soft border border-hairline-light rounded-lg space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-ink font-mono font-bold uppercase tracking-wider">Configure New Mailbox</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddForm(false)}
+                          className="text-[10px] text-mute hover:text-ink font-semibold border-none bg-transparent cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-mute mb-1">Mailbox Label (e.g. iCloud)</label>
+                          <input
+                            type="text"
+                            value={newAccount.label}
+                            onChange={(e) => setNewAccount({ ...newAccount, label: e.target.value })}
+                            placeholder="iCloud"
+                            className="w-full h-9 px-3 bg-canvas border border-hairline-light rounded-md text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-mute mb-1">IMAP Host</label>
+                          <input
+                            type="text"
+                            value={newAccount.host}
+                            onChange={(e) => setNewAccount({ ...newAccount, host: e.target.value })}
+                            placeholder="imap.mail.me.com"
+                            className="w-full h-9 bg-canvas border border-hairline-light rounded-md text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-mute mb-1">IMAP Port</label>
+                          <input
+                            type="number"
+                            value={newAccount.port}
+                            onChange={(e) => setNewAccount({ ...newAccount, port: parseInt(e.target.value) || 993 })}
+                            placeholder="993"
+                            className="w-full h-9 bg-canvas border border-hairline-light rounded-md text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-mute mb-1">Email Address</label>
+                          <input
+                            type="email"
+                            value={newAccount.user}
+                            onChange={(e) => setNewAccount({ ...newAccount, user: e.target.value })}
+                            placeholder="username@icloud.com"
+                            className="w-full h-9 bg-canvas border border-hairline-light rounded-md text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-mute mb-1">App-Specific Password</label>
+                          <input
+                            type="password"
+                            value={newAccount.password}
+                            onChange={(e) => setNewAccount({ ...newAccount, password: e.target.value })}
+                            placeholder="xxxx-xxxx-xxxx-xxxx"
+                            className="w-full h-9 bg-canvas border border-hairline-light rounded-md text-xs text-ink focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                          />
+                          <span className="text-[9px] text-mute block mt-1.5 leading-relaxed">
+                            For iCloud, go to appleid.apple.com to generate an **App-Specific Password**. You can also define it in `.env` using `IMAP_USER_2` / `IMAP_PASSWORD_2` and leave this field blank.
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleAddAccount}
+                        className="w-full py-2 bg-primary text-on-primary font-bold rounded-md hover:bg-primary-active transition-colors text-xs border-none cursor-pointer"
+                      >
+                        Add Mailbox Connection
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

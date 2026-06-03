@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppState } from '../state';
-import { ExternalLink, MoreVertical, ChevronDown, ChevronUp, FileDown, Loader2, X, Target, Sparkles, HelpCircle, Briefcase, Award, Bot, ArrowLeft, Send, Play, Terminal as TerminalIcon, Maximize2, Search } from 'lucide-react';
+import { ExternalLink, MoreVertical, ChevronDown, ChevronUp, FileDown, Loader2, X, Target, Sparkles, HelpCircle, Briefcase, Award, Bot, ArrowLeft, Send, Play, Terminal as TerminalIcon, Maximize2, Search, Mic } from 'lucide-react';
 import type { JobApplication, ApplicationStatus, UserProfile, InterviewQuestion } from '../types';
 import { createPortal } from 'react-dom';
 import { ResumeTemplate } from './ResumeTemplate';
@@ -8,6 +8,7 @@ import { CoverLetterTemplate } from './CoverLetterTemplate';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { gradeInterviewAnswer } from '../lib/gemini';
 import { AgentRunner } from './AgentRunner';
+import clsx from 'clsx';
 
 const COLUMNS: { 
   id: ApplicationStatus; 
@@ -273,6 +274,8 @@ interface JobDetailsModalProps {
 }
 
 function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
+  const { updateApplicationDetails } = useAppState();
+
   const [activeTab, setActiveTab] = useState<'match' | 'resume' | 'cover' | 'interview'>('match');
   const [isGeneratingResume, setIsGeneratingResume] = useState(false);
   const [isGeneratingCover, setIsGeneratingCover] = useState(false);
@@ -280,12 +283,80 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
   const [printingType, setPrintingType] = useState<'resume' | 'cover' | null>(null);
   const [printProgress, setPrintProgress] = useState(0);
 
+  // Resume diff editing states
+  const [editedResumeSnippet, setEditedResumeSnippet] = useState(app.tailoredResumeSnippet || '');
+  const [isResumeDirty, setIsResumeDirty] = useState(false);
+
+  useEffect(() => {
+    setEditedResumeSnippet(app.tailoredResumeSnippet || '');
+    setIsResumeDirty(false);
+  }, [app.tailoredResumeSnippet, app.id]);
+
+  const handleSaveEditedResume = () => {
+    updateApplicationDetails(app.id, { tailoredResumeSnippet: editedResumeSnippet });
+    setIsResumeDirty(false);
+  };
+
   // Practice Sandbox states
   const [activePracticeQuestion, setActivePracticeQuestion] = useState<string | null>(null);
   const [userAnswer, setUserAnswer] = useState('');
   const [isGrading, setIsGrading] = useState(false);
   const [gradeResult, setGradeResult] = useState<any | null>(null);
   const [gradeError, setGradeError] = useState('');
+
+  // Voice recording states
+  const [isRecording, setIsRecording] = useState(false);
+  const [recognition, setRecognition] = useState<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const rec = new SpeechRecognition();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.lang = 'en-US';
+
+        rec.onresult = (event: any) => {
+          let finalTranscript = '';
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            }
+          }
+          if (finalTranscript) {
+            setUserAnswer(prev => prev + (prev.trim() ? ' ' : '') + finalTranscript);
+          }
+        };
+
+        rec.onerror = (event: any) => {
+          console.error("Speech recognition error:", event.error);
+          setIsRecording(false);
+        };
+
+        rec.onend = () => {
+          setIsRecording(false);
+        };
+
+        setRecognition(rec);
+      }
+    }
+  }, []);
+
+  const toggleRecording = () => {
+    if (!recognition) {
+      alert("Speech recognition is not supported in this browser. Please use Google Chrome or Safari.");
+      return;
+    }
+
+    if (isRecording) {
+      recognition.stop();
+      setIsRecording(false);
+    } else {
+      setIsRecording(true);
+      recognition.start();
+    }
+  };
 
   const handleGradeAnswer = async () => {
     if (!activePracticeQuestion || !userAnswer.trim()) return;
@@ -563,27 +634,91 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
               )}
 
               {activeTab === 'resume' && (
-                <div className="space-y-8 flex flex-col h-full text-left">
+                <div className="space-y-6 flex flex-col h-full text-left">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
                       <Briefcase className="w-6 h-6 text-primary" />
                       <div>
-                        <h4 className="text-heading-sm font-semibold text-ink">Tailored Professional Summary</h4>
-                        <p className="text-sm text-mute">Rewritten specifically to align with this job posting.</p>
+                        <h4 className="text-heading-sm font-semibold text-ink">Resume Alignment Pane</h4>
+                        <p className="text-sm text-mute">Compare and edit your tailored experience before downloading.</p>
                       </div>
                     </div>
-                    <button
-                      onClick={handleDownloadResume}
-                      disabled={isGeneratingResume}
-                      className="flex items-center gap-2 px-6 py-3 bg-canvas-dark hover:bg-surface-elevated disabled:opacity-50 text-on-dark rounded-md text-sm font-semibold transition-colors cursor-pointer border-none"
-                    >
-                      {isGeneratingResume ? <Loader2 className="w-4 h-4 animate-spin text-on-dark" /> : <FileDown className="w-4 h-4 text-on-dark" />}
-                      {isGeneratingResume ? 'Generating...' : 'Download Resume'}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={handleSaveEditedResume}
+                        disabled={!isResumeDirty}
+                        className={clsx(
+                          "px-4 py-2 border rounded-md text-xs font-bold uppercase transition-colors cursor-pointer",
+                          isResumeDirty 
+                            ? "bg-primary text-on-primary border-primary hover:bg-primary-focus" 
+                            : "bg-transparent text-mute border-hairline-light cursor-not-allowed"
+                        )}
+                      >
+                        Save Edits
+                      </button>
+                      <button
+                        onClick={handleDownloadResume}
+                        disabled={isGeneratingResume}
+                        className="flex items-center gap-2 px-5 py-2 bg-canvas-dark hover:bg-surface-elevated disabled:opacity-50 text-on-dark rounded-md text-xs font-bold uppercase transition-colors cursor-pointer border-none shadow-product"
+                      >
+                        {isGeneratingResume ? <Loader2 className="w-4 h-4 animate-spin text-on-dark" /> : <FileDown className="w-4 h-4 text-on-dark" />}
+                        {isGeneratingResume ? 'Generating...' : 'Download Resume'}
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="flex-1 p-8 rounded-lg bg-surface-soft border border-hairline-light font-mono leading-relaxed text-ink text-sm whitespace-pre-wrap select-all">
-                    {app.tailoredResumeSnippet || "No summary snippet was generated."}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 min-h-[400px]">
+                    {/* Original Profile Context */}
+                    <div className="flex flex-col border border-hairline-light rounded-lg overflow-hidden bg-canvas">
+                      <div className="px-5 py-3 border-b border-hairline-light bg-surface-soft flex justify-between items-center">
+                        <span className="text-[10px] font-mono font-bold text-mute uppercase tracking-wider">Original Base Profile</span>
+                      </div>
+                      <div className="p-6 space-y-6 overflow-y-auto max-h-[450px]">
+                        <div>
+                          <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-mute mb-2">Base Summary</label>
+                          <p className="text-xs text-charcoal bg-surface-soft p-4 rounded border border-hairline-light leading-relaxed whitespace-pre-wrap">{profile.summary}</p>
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-mute mb-2">Base Skills</label>
+                          <div className="flex flex-wrap gap-2">
+                            {profile.skills.map((s, idx) => (
+                              <span key={idx} className="px-2 py-1 bg-surface-soft border border-hairline-light rounded text-[10px] font-semibold text-charcoal">{s}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tailored Split Editor */}
+                    <div className="flex flex-col border border-hairline-light rounded-lg overflow-hidden bg-canvas">
+                      <div className="px-5 py-3 border-b border-hairline-light bg-surface-soft flex justify-between items-center">
+                        <span className="text-[10px] font-mono font-bold text-primary uppercase tracking-wider">Tailored Document Summary</span>
+                        {isResumeDirty && <span className="text-[9px] text-accent-warning uppercase font-mono font-bold">Unsaved changes</span>}
+                      </div>
+                      <div className="p-6 flex-1 flex flex-col gap-6 overflow-y-auto max-h-[450px]">
+                        <div className="flex-1 flex flex-col min-h-[150px]">
+                          <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-primary mb-2">Editable Tailored Summary</label>
+                          <textarea
+                            value={editedResumeSnippet}
+                            onChange={(e) => { setEditedResumeSnippet(e.target.value); setIsResumeDirty(true); }}
+                            rows={8}
+                            className="w-full flex-1 p-4 bg-canvas border border-hairline-light rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none text-xs text-ink font-mono leading-relaxed resize-none"
+                            placeholder="No summary snippet was generated."
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-primary mb-2">Tailored Target Skills</label>
+                          <div className="flex flex-wrap gap-2">
+                            {(app.tailoredSkills || app.extractedKeywords || []).map((s, idx) => (
+                              <span key={idx} className="px-2 py-1 bg-primary/5 border border-primary/20 rounded text-[10px] font-semibold text-primary">{s}</span>
+                            ))}
+                            {(app.tailoredSkills || app.extractedKeywords || []).length === 0 && (
+                              <span className="text-xs text-mute italic">No tailored skills list found.</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -649,11 +784,26 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
                         <div className="space-y-4">
                           <label className="block text-xs font-semibold text-mute uppercase tracking-wider">Terminal Simulator</label>
                           <div className="w-full bg-[#1e1e1e] rounded-lg overflow-hidden shadow-lg border border-[#333]">
-                            <div className="px-4 py-2 bg-[#2d2d2d] border-b border-[#333] flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
-                              <div className="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
-                              <div className="w-3 h-3 rounded-full bg-[#27c93f]"></div>
-                              <span className="text-[10px] font-mono text-[#8a8a8a] ml-2">bash - mock-interview</span>
+                            <div className="px-4 py-2 bg-[#2d2d2d] border-b border-[#333] flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
+                                <div className="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
+                                <div className="w-3 h-3 rounded-full bg-[#27c93f]"></div>
+                                <span className="text-[10px] font-mono text-[#8a8a8a] ml-2">bash - mock-interview</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={toggleRecording}
+                                className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase transition-all cursor-pointer border-none ${
+                                  isRecording 
+                                    ? "bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse" 
+                                    : "bg-[#3c3c3c] text-[#8a8a8a] hover:bg-[#444] hover:text-[#d4d4d4]"
+                                }`}
+                                title={isRecording ? "Stop listening" : "Dictate your answer"}
+                              >
+                                <Mic className="w-3 h-3" />
+                                {isRecording ? 'Listening...' : 'Voice input'}
+                              </button>
                             </div>
                             <div className="p-4 font-mono text-[13px] text-[#d4d4d4] flex flex-col gap-2">
                               <div className="flex gap-2">

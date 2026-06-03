@@ -154,6 +154,17 @@ html.dark {
   --color-divider-soft: rgba(255, 255, 255, 0.04);
   --color-stone: #52525b;
   --color-charcoal: #e5e7eb;
+  
+  --color-primary: #ffffff;
+  --color-primary-focus: #e5e7eb;
+  --color-primary-deep: #e5e7eb;
+  --color-on-primary: #111111;
+  --color-canvas-dark: #ffffff;
+  --color-on-dark: #111111;
+  
+  --color-mute: #a1a1aa;
+  --color-faint: #1e1e1e;
+  --color-hairline-strong: #ffffff;
 }
 
 #print-portal {

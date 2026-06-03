@@ -47,7 +47,7 @@ export function Dashboard() {
         <div className="flex items-center bg-surface-soft p-1 rounded-full border border-hairline-light shrink-0">
           <button 
             onClick={() => setView('tracker')}
-            className="px-4 py-2 text-xs font-semibold text-ink bg-white rounded-full shadow-product border-none outline-none cursor-pointer"
+            className="px-4 py-2 text-xs font-semibold text-ink bg-canvas-light rounded-full shadow-product border-none outline-none cursor-pointer"
           >
             Job Tracker
           </button>
@@ -118,7 +118,7 @@ export function Dashboard() {
                     <div key={app.id} className="flex items-center justify-between py-5 text-xs">
                       <div className="flex items-center gap-4 min-w-0">
                         {/* Company placeholder badge */}
-                        <div className="w-10 h-10 bg-white border border-hairline-light rounded-lg flex items-center justify-center font-bold text-ink shrink-0 text-sm">
+                        <div className="w-10 h-10 bg-canvas-light border border-hairline-light rounded-lg flex items-center justify-center font-bold text-ink shrink-0 text-sm">
                           {companyInitial}
                         </div>
                         <div className="min-w-0">
@@ -194,7 +194,7 @@ export function Dashboard() {
             <div className="pt-8">
               <button 
                 onClick={() => setView('runner')}
-                className="w-full bg-white hover:bg-[#e5e7eb] text-ink py-3.5 rounded-md text-xs font-bold uppercase transition-all cursor-pointer border-none shadow-product"
+                className="w-full bg-white hover:bg-[#e5e7eb] text-[#111111] py-3.5 rounded-md text-xs font-bold uppercase transition-all cursor-pointer border-none shadow-product"
               >
                 Deploy Scraper Agent
               </button>

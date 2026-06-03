@@ -116,12 +116,13 @@ const DEFAULT_SETTINGS: SystemSettings = {
   resumeFont: 'sans',
   coachPersona: 'star',
   coachDifficulty: 'strict',
-  emailProvider: 'mock',
+  emailProvider: 'imap',
   imapHost: 'imap.gmail.com',
   imapPort: 993,
   imapUser: '',
   imapPassword: '',
   darkMode: false,
+  imapAccounts: [],
 };
 
 export interface PrefilledJob {

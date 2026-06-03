@@ -280,14 +280,14 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
             <button
               type="button"
               onClick={() => setInputMode('url')}
-              className={clsx("flex-1 py-2 text-xs font-semibold rounded-md transition-all border-none cursor-pointer outline-none", inputMode === 'url' ? "bg-white text-ink shadow-product font-bold" : "text-mute hover:text-ink bg-transparent")}
+              className={clsx("flex-1 py-2 text-xs font-semibold rounded-md transition-all border-none cursor-pointer outline-none", inputMode === 'url' ? "bg-canvas-light text-ink shadow-product font-bold" : "text-mute hover:text-ink bg-transparent")}
             >
               <Link2 className="w-4 h-4 inline-block mr-1.5 align-text-bottom" /> Scrape URL
             </button>
             <button
               type="button"
               onClick={() => setInputMode('text')}
-              className={clsx("flex-1 py-2 text-xs font-semibold rounded-md transition-all border-none cursor-pointer outline-none", inputMode === 'text' ? "bg-white text-ink shadow-product font-bold" : "text-mute hover:text-ink bg-transparent")}
+              className={clsx("flex-1 py-2 text-xs font-semibold rounded-md transition-all border-none cursor-pointer outline-none", inputMode === 'text' ? "bg-canvas-light text-ink shadow-product font-bold" : "text-mute hover:text-ink bg-transparent")}
             >
               <FileText className="w-4 h-4 inline-block mr-1.5 align-text-bottom" /> Paste JD
             </button>
@@ -304,7 +304,7 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
                   value={url}
                   onChange={e => setUrl(e.target.value)}
                   disabled={isRunning}
-                  className="w-full px-4 py-2.5 bg-white border border-hairline-light rounded-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all disabled:opacity-50 text-ink placeholder:text-stone h-10 text-sm"
+                  className="w-full px-4 py-2.5 bg-canvas-light border border-hairline-light rounded-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all disabled:opacity-50 text-ink placeholder:text-stone h-10 text-sm"
                 />
                 <p className="mt-3 text-xs text-mute font-mono">Note: If scraping fails due to anti-bot protection, use "Paste JD" instead.</p>
               </div>
@@ -318,7 +318,7 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
                   value={jdText}
                   onChange={e => setJdText(e.target.value)}
                   disabled={isRunning}
-                  className="w-full px-4 py-2.5 bg-white border border-hairline-light rounded-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all disabled:opacity-50 resize-none text-ink placeholder:text-stone text-sm"
+                  className="w-full px-4 py-2.5 bg-canvas-light border border-hairline-light rounded-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all disabled:opacity-50 resize-none text-ink placeholder:text-stone text-sm"
                 />
               </div>
             )}

@@ -116,7 +116,21 @@ function jobScraperPlugin(): Plugin {
           });
           req.on('end', async () => {
             try {
-              const { provider, imapHost, imapPort, imapUser, imapPassword } = JSON.parse(body);
+              const { provider, imapHost, imapPort, imapUser: reqUser, imapPassword: reqPassword } = JSON.parse(body);
+              
+              let imapUser = reqUser || process.env.IMAP_USER || '';
+              let imapPassword = reqPassword || '';
+              
+              if (!imapPassword) {
+                if (!reqUser || reqUser === process.env.IMAP_USER) {
+                  imapUser = process.env.IMAP_USER || '';
+                  imapPassword = process.env.IMAP_PASSWORD || '';
+                } else if (reqUser === process.env.IMAP_USER_2) {
+                  imapPassword = process.env.IMAP_PASSWORD_2 || '';
+                } else if (reqUser === process.env.IMAP_USER_3) {
+                  imapPassword = process.env.IMAP_PASSWORD_3 || '';
+                }
+              }
               
               if (provider === 'mock') {
                 const mockEmails = [
@@ -185,7 +199,9 @@ function jobScraperPlugin(): Plugin {
                   logger: false
                 });
 
+                console.log(`[IMAP] Attempting connection to ${imapHost}:${imapPort} for user: ${imapUser}`);
                 await client.connect();
+                console.log("[IMAP] Connection established successfully.");
                 let lock = await client.getMailboxLock('INBOX');
                 const fetchedEmails = [];
                 try {
@@ -238,6 +254,7 @@ function jobScraperPlugin(): Plugin {
               res.statusCode = 400;
               res.end(JSON.stringify({ error: 'Invalid provider specified' }));
             } catch (err: any) {
+              console.error("[IMAP Error]:", err);
               res.statusCode = 500;
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({ error: err.message || 'Internal proxy error' }));
