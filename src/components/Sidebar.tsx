@@ -1,10 +1,10 @@
 import React from 'react';
 import { useAppState } from '../state';
-import { LayoutDashboard, ListTodo, Bot, UserCircle, Settings, Mail } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Bot, UserCircle, Settings, Mail, Sun, Moon } from 'lucide-react';
 import clsx from 'clsx';
 
 export function Sidebar() {
-  const { view, setView, emailSuggestions } = useAppState();
+  const { view, setView, emailSuggestions, settings, updateSettings } = useAppState();
   const pendingCount = emailSuggestions.filter(s => s.status === 'pending').length;
 
   const navItems = [
@@ -55,7 +55,30 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-hairline-light">
+      <div className="p-4 border-t border-hairline-light space-y-1">
+        <button 
+          onClick={() => updateSettings({ darkMode: !settings.darkMode })}
+          className="w-full flex items-center justify-between px-4 py-2.5 transition-all text-sm font-semibold rounded-md hover:bg-surface-soft text-mute hover:text-ink bg-transparent border-none outline-none cursor-pointer"
+        >
+          <div className="flex items-center gap-3">
+            {settings.darkMode ? (
+              <Sun className="w-4 h-4 shrink-0 text-current" />
+            ) : (
+              <Moon className="w-4 h-4 shrink-0 text-current" />
+            )}
+            <span>{settings.darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+          </div>
+          <div className={clsx(
+            "w-8 h-4 rounded-full p-0.5 transition-colors duration-200 ease-in-out",
+            settings.darkMode ? "bg-primary border border-hairline-light" : "bg-faint"
+          )}>
+            <div className={clsx(
+              "w-2.5 h-2.5 rounded-full bg-white shadow-sm transform transition-transform duration-200 ease-in-out",
+              settings.darkMode ? "translate-x-4" : "translate-x-0"
+            )} />
+          </div>
+        </button>
+
         <button 
           onClick={() => setView('settings')}
           className={clsx(

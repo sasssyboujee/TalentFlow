@@ -121,6 +121,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
   imapPort: 993,
   imapUser: '',
   imapPassword: '',
+  darkMode: false,
 };
 
 export interface PrefilledJob {
@@ -189,6 +190,15 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       return newSettings;
     });
   };
+
+  // Sync dark class on document element
+  useEffect(() => {
+    if (settings.darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [settings.darkMode]);
   
   // Persist Profile
   const [profile, setProfileState] = useState<UserProfile>(() => {

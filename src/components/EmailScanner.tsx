@@ -11,6 +11,7 @@ export function EmailScanner() {
     applications, 
     addApplication, 
     updateApplicationStatus, 
+    updateApplicationDetails,
     emailSuggestions, 
     saveSuggestions, 
     updateSuggestionStatus 
@@ -122,7 +123,10 @@ export function EmailScanner() {
 
     if (matchedJob) {
       // Update existing application
-      updateApplicationStatus(matchedJob.id, suggestion.suggestedStatus as ApplicationStatus);
+      updateApplicationDetails(matchedJob.id, {
+        status: suggestion.suggestedStatus as ApplicationStatus,
+        emailVerified: true
+      });
     } else {
       // Create a new application in tracker
       const newApp: JobApplication = {
@@ -132,6 +136,7 @@ export function EmailScanner() {
         url: 'Extracted from Email',
         status: suggestion.suggestedStatus as ApplicationStatus,
         dateAdded: new Date().toISOString(),
+        emailVerified: true,
       };
       addApplication(newApp);
     }

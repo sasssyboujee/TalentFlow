@@ -128,6 +128,11 @@ export function Dashboard() {
                       </div>
 
                       <div className="flex items-center gap-4 shrink-0">
+                        {app.emailVerified && (
+                          <div className="px-2.5 py-1 rounded-md border text-[10px] font-bold uppercase tracking-wider font-mono bg-accent-teal/10 text-accent-teal border-accent-teal/20">
+                            ✓ Synced
+                          </div>
+                        )}
                         {app.matchScore !== undefined && (
                           <div className={clsx(
                             "px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider font-mono",

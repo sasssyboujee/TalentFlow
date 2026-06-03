@@ -50,6 +50,7 @@ export interface JobApplication {
   interviewPrep?: InterviewQuestion[];
   skillCategories?: SkillCategoryScore[];
   agentLogs?: AgentLog[];
+  emailVerified?: boolean;
 }
 
 export interface AgentLog {
@@ -104,6 +105,7 @@ export interface SystemSettings {
   imapUser: string;
   imapPassword?: string;
   lastEmailScanTime?: string;
+  darkMode: boolean;
 }
 
 export interface EmailSuggestion {

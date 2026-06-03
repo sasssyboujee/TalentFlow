@@ -46,7 +46,7 @@
   --color-on-dark-soft: #a1a1aa;
 
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Cal Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Cal Sans", "Space Grotesk", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 @utility text-hero-display {
@@ -136,7 +136,24 @@
 }
 
 body {
-  @apply bg-canvas text-body antialiased font-sans;
+  @apply bg-canvas text-body antialiased font-sans transition-colors duration-200;
+}
+
+html.dark {
+  --color-canvas: #101010;
+  --color-canvas-light: #101010;
+  --color-canvas-parchment: #1a1a1a;
+  --color-ink: #ffffff;
+  --color-body: #a1a1aa;
+  --color-body-muted: #71717a;
+  --color-surface-soft: #161616;
+  --color-surface-card: #161616;
+  --color-surface-deep: #0a0a0a;
+  --color-surface-elevated: #1e1e1e;
+  --color-hairline-light: rgba(255, 255, 255, 0.08);
+  --color-divider-soft: rgba(255, 255, 255, 0.04);
+  --color-stone: #52525b;
+  --color-charcoal: #e5e7eb;
 }
 
 #print-portal {

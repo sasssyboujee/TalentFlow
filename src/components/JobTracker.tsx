@@ -251,9 +251,16 @@ function JobCard({ app, onStatusChange, onSelect, onDragEnd }: JobCardProps) {
 
       <div className={`flex justify-between items-center text-[10px] stop-propagation ${textSub}`}>
         <span className="font-mono">{new Date(app.dateAdded).toLocaleDateString()}</span>
-        <a href={app.url} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-1 transition-colors hover:text-primary`}>
-          View JD <ExternalLink className="w-3 h-3" />
-        </a>
+        <div className="flex items-center gap-2">
+          {app.emailVerified && (
+            <span className="flex items-center gap-0.5 text-accent-teal font-semibold font-mono uppercase text-[9px] bg-accent-teal/10 border border-accent-teal/20 px-1.5 py-0.5 rounded-md">
+              ✓ Synced
+            </span>
+          )}
+          <a href={app.url} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-1 transition-colors hover:text-primary`}>
+            View JD <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
       </div>
     </div>
   );
