@@ -110,7 +110,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
   minMatchThreshold: 70,
   autoOverwriteSkills: false,
   autoExtractLocation: true,
-  autoSelectProjects: true,
+  autoSelectProjects: false,
   strictOnePage: true,
   resumeTheme: 'cobalt',
   resumeFont: 'sans',

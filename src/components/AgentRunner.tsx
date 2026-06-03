@@ -79,11 +79,11 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
   const [isRunning, setIsRunning] = useState(false);
   const [logs, setLogs] = useState<AgentLog[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
-  const [autoSelectProjects, setAutoSelectProjects] = useState(settings.autoSelectProjects !== false);
+  const [autoSelectProjects, setAutoSelectProjects] = useState(!!settings.autoSelectProjects);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setAutoSelectProjects(settings.autoSelectProjects !== false);
+    setAutoSelectProjects(!!settings.autoSelectProjects);
   }, [settings.autoSelectProjects]);
 
   const providerName = settings.activeProvider === 'deepseek' ? 'DeepSeek' : 'Gemini';
