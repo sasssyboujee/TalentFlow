@@ -15,8 +15,8 @@ const COLUMNS: {
   label: string; 
   badgeClass: string;
 }[] = [
-  { id: 'ready', label: 'Ready to Apply', badgeClass: 'bg-[#fb923c]/15 text-[#d97706] border border-[#fb923c]/20' },
-  { id: 'applied', label: 'Applied', badgeClass: 'bg-blue-50 text-blue-600 border border-blue-100' },
+  { id: 'ready', label: 'Ready to Apply', badgeClass: 'bg-[#fb923c]/15 text-[#d97706] dark:text-[#fb923c] border border-[#fb923c]/20' },
+  { id: 'applied', label: 'Applied', badgeClass: 'bg-accent-light-blue/10 text-accent-light-blue border border-accent-light-blue/20' },
   { id: 'interview', label: 'Interview', badgeClass: 'bg-primary/10 text-primary border border-primary/20' },
   { id: 'rejected', label: 'Rejected', badgeClass: 'bg-accent-danger/10 text-accent-danger border border-accent-danger/20' },
 ];
@@ -534,33 +534,35 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
               <div className="w-full h-64 flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart cx="50%" cy="50%" outerRadius="75%" data={skillCategories}>
-                    <PolarGrid stroke="#e2e2e7" />
-                    <PolarAngleAxis dataKey="category" tick={{ fill: '#505a63', fontSize: 11, fontWeight: 600 }} />
+                    <PolarGrid stroke="currentColor" className="text-hairline-light" />
+                    <PolarAngleAxis dataKey="category" tick={{ fill: 'currentColor', fontSize: 11, fontWeight: 600 }} className="text-mute" />
                     <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                     <Radar 
                       name="Your Skills" 
                       dataKey="userScore" 
-                      stroke="#111111" 
-                      fill="#111111" 
-                      fillOpacity={0.15} 
+                      stroke="#3b82f6" 
+                      fill="#3b82f6" 
+                      fillOpacity={0.25} 
+                      strokeWidth={2}
                     />
                     <Radar 
                       name="Job Demand" 
                       dataKey="jobDemandScore" 
-                      stroke="#898989" 
-                      fill="#898989" 
-                      fillOpacity={0.08} 
+                      stroke="#9ca3af" 
+                      fill="#9ca3af" 
+                      fillOpacity={0.15} 
+                      strokeWidth={2}
                     />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
               <div className="flex justify-center gap-6 text-xs mt-4 font-semibold">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 bg-primary opacity-15 border border-primary rounded-sm"></span>
+                  <span className="w-3 h-3 bg-[#3b82f6]/25 border-2 border-[#3b82f6] rounded-sm"></span>
                   <span className="text-ink">Your Skills</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 bg-stone opacity-8 border border-stone rounded-sm"></span>
+                  <span className="w-3 h-3 bg-[#9ca3af]/15 border-2 border-[#9ca3af] rounded-sm"></span>
                   <span className="text-ink">Job Demand</span>
                 </div>
               </div>
@@ -872,7 +874,7 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
                               <h4 className="text-[9px] font-mono font-bold text-mute uppercase tracking-widest mb-2">Interviewer Feedback</h4>
                               <p className="text-xs text-body leading-relaxed whitespace-pre-wrap">{gradeResult.feedback}</p>
                             </div>
-                            <div className="p-5 bg-[#f8f9fa] border border-hairline-light rounded-lg text-left">
+                            <div className="p-5 bg-surface-soft border border-hairline-light rounded-lg text-left">
                               <h4 className="text-[9px] font-mono font-bold text-mute uppercase tracking-widest mb-2">AI Re-Script Recommendation</h4>
                               <p className="text-xs text-ink leading-relaxed italic whitespace-pre-wrap">"{gradeResult.polishedAnswer}"</p>
                             </div>

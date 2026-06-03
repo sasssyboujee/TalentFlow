@@ -48,7 +48,7 @@ export function Sidebar() {
               <Icon className="w-4 h-4 shrink-0 text-current" />
               <span>{item.label}</span>
               {item.id === 'email-scan' && pendingCount > 0 && (
-                <span className="ml-auto bg-[#e5e7eb] text-ink text-[10px] font-bold px-2 py-0.5 rounded-full leading-none">
+                <span className="ml-auto bg-surface-soft text-ink text-[10px] font-bold px-2 py-0.5 rounded-full leading-none">
                   {pendingCount}
                 </span>
               )}
@@ -72,11 +72,11 @@ export function Sidebar() {
           </div>
           <div className={clsx(
             "w-8 h-4 rounded-full p-0.5 transition-colors duration-200 ease-in-out",
-            settings.darkMode ? "bg-primary border border-hairline-light" : "bg-faint"
+            settings.darkMode ? "bg-ink border border-hairline-light" : "bg-faint"
           )}>
             <div className={clsx(
-              "w-2.5 h-2.5 rounded-full bg-white shadow-sm transform transition-transform duration-200 ease-in-out",
-              settings.darkMode ? "translate-x-4" : "translate-x-0"
+              "w-2.5 h-2.5 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out",
+              settings.darkMode ? "translate-x-4 bg-canvas-light" : "translate-x-0 bg-white"
             )} />
           </div>
         </button>

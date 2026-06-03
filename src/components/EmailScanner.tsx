@@ -259,10 +259,10 @@ export function EmailScanner() {
 
   const getStatusBadgeColor = (status: EmailSuggestion['suggestedStatus']) => {
     switch (status) {
-      case 'applied': return 'bg-accent-teal/10 text-accent-teal border-accent-teal/20';
+      case 'applied': return 'bg-accent-light-blue/10 text-accent-light-blue border-accent-light-blue/20';
       case 'interview': return 'bg-primary/10 text-primary border-primary/20';
       case 'rejected': return 'bg-accent-danger/10 text-accent-danger border-accent-danger/20';
-      case 'offer': return 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20';
+      case 'offer': return 'bg-accent-teal/10 text-accent-teal border-accent-teal/20';
       default: return 'bg-stone/10 text-stone border-stone/20';
     }
   };

@@ -20,12 +20,12 @@ export function Dashboard() {
 
   const getStatusPillColor = (status: ApplicationStatus) => {
     switch (status) {
-      case 'offer': return 'bg-[#34d399]/15 text-[#059669] border-[#34d399]/20';
+      case 'offer': return 'bg-accent-teal/10 text-accent-teal border-accent-teal/20';
       case 'interview': return 'bg-primary/10 text-primary border-primary/20';
-      case 'applied': return 'bg-blue-50 text-blue-600 border-blue-100';
+      case 'applied': return 'bg-accent-light-blue/10 text-accent-light-blue border-accent-light-blue/20';
       case 'rejected': return 'bg-accent-danger/10 text-accent-danger border-accent-danger/20';
-      case 'ready': return 'bg-[#fb923c]/15 text-[#d97706] border-[#fb923c]/20';
-      default: return 'bg-slate-100 text-mute border-hairline-light';
+      case 'ready': return 'bg-[#fb923c]/15 text-[#d97706] dark:text-[#fb923c] border-[#fb923c]/20';
+      default: return 'bg-surface-soft text-mute border-hairline-light';
     }
   };
 
@@ -209,8 +209,6 @@ export function Dashboard() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-mono">
           <div className="flex items-center gap-2">
             <span className="font-display font-semibold text-on-dark text-sm">TalentFlow</span>
-            <span className="text-slate-700">|</span>
-            <span>AI Career Bureau</span>
           </div>
           <div>
             System connection secure. Encrypted via TalentFlow-VPN. 2026.
