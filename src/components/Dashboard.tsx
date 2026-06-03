@@ -3,7 +3,8 @@ import { useAppState } from '../state';
 import { Target, CheckCircle2, RotateCw, Briefcase, TrendingUp } from 'lucide-react';
 
 export function Dashboard() {
-  const { applications, setView } = useAppState();
+  const { applications, setView, emailSuggestions } = useAppState();
+  const pendingSuggestions = emailSuggestions.filter(s => s.status === 'pending');
 
   const stats = useMemo(() => {
     const total = applications.length;
@@ -21,6 +22,29 @@ export function Dashboard() {
         <h1 className="text-display-xl text-ink mb-4 font-semibold tracking-tight uppercase">TalentFlow</h1>
         <p className="text-lead text-charcoal max-w-2xl">Monitor your autonomous application agents and active recruitment pipelines.</p>
       </div>
+
+      {/* Email Suggestions Banner */}
+      {pendingSuggestions.length > 0 && (
+        <div className="w-full bg-accent-teal/10 border-b border-accent-teal/20 py-4 px-12 shrink-0">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 text-left">
+            <div className="flex items-center gap-3">
+              <span className="flex h-2.5 w-2.5 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-teal opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent-teal"></span>
+              </span>
+              <p className="text-[11px] font-bold text-ink uppercase tracking-wider">
+                AI Email Sync found {pendingSuggestions.length} pending status suggestion(s)
+              </p>
+            </div>
+            <button 
+              onClick={() => setView('email-scan')}
+              className="bg-accent-teal text-on-dark px-4 py-1.5 rounded-full text-[9px] font-bold uppercase hover:bg-accent-teal/90 transition-all border-none outline-none cursor-pointer"
+            >
+              Review Updates &rarr;
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid - Edge-to-Edge */}
       <div className="w-full border-b border-hairline-light">

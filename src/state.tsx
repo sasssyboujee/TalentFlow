@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { JobApplication, UserProfile, ViewState, AgentLog, SystemSettings } from './types';
+import type { JobApplication, UserProfile, ViewState, AgentLog, SystemSettings, EmailSuggestion } from './types';
 
 // Initial Mock Data
 const INITIAL_PROFILE: UserProfile = {
@@ -110,12 +110,17 @@ const DEFAULT_SETTINGS: SystemSettings = {
   minMatchThreshold: 70,
   autoOverwriteSkills: false,
   autoExtractLocation: true,
-  autoSelectProjects: false,
+  autoSelectProjects: true,
   strictOnePage: true,
   resumeTheme: 'cobalt',
   resumeFont: 'sans',
   coachPersona: 'star',
   coachDifficulty: 'strict',
+  emailProvider: 'mock',
+  imapHost: 'imap.gmail.com',
+  imapPort: 993,
+  imapUser: '',
+  imapPassword: '',
 };
 
 export interface PrefilledJob {
@@ -139,6 +144,9 @@ interface AppStateContextType {
   updateSettings: (updates: Partial<SystemSettings>) => void;
   prefilledJob?: PrefilledJob;
   setPrefilledJob: (job?: PrefilledJob) => void;
+  emailSuggestions: EmailSuggestion[];
+  saveSuggestions: (suggestions: EmailSuggestion[]) => void;
+  updateSuggestionStatus: (id: string, status: EmailSuggestion['status']) => void;
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -257,13 +265,35 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  // Persist Email Suggestions
+  const [emailSuggestions, setEmailSuggestionsState] = useState<EmailSuggestion[]>(() => {
+    try {
+      const saved = localStorage.getItem('agent_email_suggestions');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const saveSuggestions = (suggestions: EmailSuggestion[]) => {
+    setEmailSuggestionsState(suggestions);
+    localStorage.setItem('agent_email_suggestions', JSON.stringify(suggestions));
+  };
+
+  const updateSuggestionStatus = (id: string, status: EmailSuggestion['status']) => {
+    saveSuggestions(
+      emailSuggestions.map(s => s.id === id ? { ...s, status } : s)
+    );
+  };
+
   return (
     <AppStateContext.Provider value={{
       view, setView,
       profile, setProfile,
       applications, addApplication, deleteApplication, updateApplicationStatus, updateApplicationLogs, updateApplicationDetails,
       settings, updateSettings,
-      prefilledJob, setPrefilledJob
+      prefilledJob, setPrefilledJob,
+      emailSuggestions, saveSuggestions, updateSuggestionStatus
     }}>
       {children}
     </AppStateContext.Provider>

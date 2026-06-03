@@ -98,7 +98,27 @@ export interface SystemSettings {
   resumeFont: string;
   coachPersona: string;
   coachDifficulty: string;
+  emailProvider: 'mock' | 'imap';
+  imapHost: string;
+  imapPort: number;
+  imapUser: string;
+  imapPassword?: string;
+  lastEmailScanTime?: string;
 }
 
-export type ViewState = 'dashboard' | 'runner' | 'tracker' | 'profile' | 'settings';
+export interface EmailSuggestion {
+  id: string;
+  subject: string;
+  from: string;
+  date: string;
+  bodySnippet: string;
+  detectedCompany: string;
+  detectedRole: string;
+  suggestedStatus: 'applied' | 'interview' | 'rejected' | 'offer' | 'unknown';
+  reason: string;
+  status: 'pending' | 'applied' | 'dismissed';
+  emailId: string;
+}
+
+export type ViewState = 'dashboard' | 'runner' | 'tracker' | 'profile' | 'settings' | 'email-scan';
 

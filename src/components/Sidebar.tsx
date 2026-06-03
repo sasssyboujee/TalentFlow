@@ -1,15 +1,17 @@
 import React from 'react';
 import { useAppState } from '../state';
-import { LayoutDashboard, ListTodo, Bot, UserCircle, Settings } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Bot, UserCircle, Settings, Mail } from 'lucide-react';
 import clsx from 'clsx';
 
 export function Sidebar() {
-  const { view, setView } = useAppState();
+  const { view, setView, emailSuggestions } = useAppState();
+  const pendingCount = emailSuggestions.filter(s => s.status === 'pending').length;
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'tracker', label: 'Job Tracker', icon: ListTodo },
     { id: 'runner', label: 'Agent Runner', icon: Bot },
+    { id: 'email-scan', label: 'AI Email Sync', icon: Mail },
     { id: 'profile', label: 'My Data Profile', icon: UserCircle },
   ] as const;
 
@@ -41,14 +43,19 @@ export function Sidebar() {
               key={item.id}
               onClick={() => setView(item.id)}
               className={clsx(
-                "w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-sm font-semibold rounded-full",
+                "w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-sm font-semibold rounded-full border-none outline-none cursor-pointer",
                 isActive 
                   ? "bg-canvas-light text-canvas-dark" 
                   : "text-on-dark-mute hover:text-on-dark hover:bg-surface-elevated"
               )}
             >
               <Icon className="w-4 h-4 shrink-0" />
-              {item.label}
+              <span>{item.label}</span>
+              {item.id === 'email-scan' && pendingCount > 0 && (
+                <span className="ml-auto bg-accent-teal text-on-dark text-[10px] font-bold px-2.5 py-0.5 rounded-full leading-none">
+                  {pendingCount}
+                </span>
+              )}
             </button>
           );
         })}

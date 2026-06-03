@@ -314,6 +314,97 @@ export function SettingsManager() {
           </div>
         </section>
 
+        {/* Section 2.5: AI Email Sync Configuration */}
+        <section className="bg-canvas-light border border-hairline-light rounded-2xl p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <Bot className="w-5 h-5 text-primary" />
+            <div>
+              <h3 className="text-base font-bold text-ink">AI Email Sync Settings</h3>
+              <p className="text-xs text-mute mt-0.5">Configure IMAP settings or use simulated scans.</p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">Email Fetching Provider</label>
+              <select
+                value={settings.emailProvider || 'mock'}
+                onChange={(e) => {
+                  updateSettings({ emailProvider: e.target.value as 'mock' | 'imap' });
+                  triggerSuccessFeedback();
+                }}
+                className="w-full px-4 py-3 bg-surface-soft border border-hairline-light rounded-xl text-xs text-ink font-semibold focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer"
+              >
+                <option value="mock">Simulated Mode (Preloaded Demo Emails)</option>
+                <option value="imap">Real Gmail / IMAP Connection</option>
+              </select>
+            </div>
+
+            {(settings.emailProvider === 'imap') && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-surface-soft rounded-xl border border-hairline-light">
+                <div className="md:col-span-2">
+                  <span className="text-[10px] text-accent-danger font-mono font-bold uppercase tracking-wider block mb-1">Gmail / IMAP Instructions</span>
+                  <p className="text-[10px] text-mute leading-relaxed">
+                    For Gmail, you <strong>must</strong> generate a 16-character <strong>App Password</strong> in your Google Account security settings. Never enter your main account password. The connection operates in read-only mode to prevent any modification to your inbox.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">IMAP Host</label>
+                  <input
+                    type="text"
+                    value={settings.imapHost || ''}
+                    onChange={(e) => {
+                      updateSettings({ imapHost: e.target.value });
+                      triggerSuccessFeedback();
+                    }}
+                    placeholder="imap.gmail.com"
+                    className="w-full px-4 py-3 bg-canvas border border-hairline-light rounded-xl font-mono text-xs text-ink focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">IMAP Port</label>
+                  <input
+                    type="number"
+                    value={settings.imapPort || 993}
+                    onChange={(e) => {
+                      updateSettings({ imapPort: parseInt(e.target.value) || 993 });
+                      triggerSuccessFeedback();
+                    }}
+                    placeholder="993"
+                    className="w-full px-4 py-3 bg-canvas border border-hairline-light rounded-xl font-mono text-xs text-ink focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">Email Address</label>
+                  <input
+                    type="email"
+                    value={settings.imapUser || ''}
+                    onChange={(e) => {
+                      updateSettings({ imapUser: e.target.value });
+                      triggerSuccessFeedback();
+                    }}
+                    placeholder="yourname@gmail.com"
+                    className="w-full px-4 py-3 bg-canvas border border-hairline-light rounded-xl font-mono text-xs text-ink focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-mute mb-2">App Password</label>
+                  <input
+                    type="password"
+                    value={settings.imapPassword || ''}
+                    onChange={(e) => {
+                      updateSettings({ imapPassword: e.target.value });
+                      triggerSuccessFeedback();
+                    }}
+                    placeholder="xxxx xxxx xxxx xxxx"
+                    className="w-full px-4 py-3 bg-canvas border border-hairline-light rounded-xl font-mono text-xs text-ink focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
         {/* Section 3: Resume Constraints */}
         <section className="bg-canvas-light border border-hairline-light rounded-2xl p-8">
           <div className="flex items-center gap-3 mb-6">

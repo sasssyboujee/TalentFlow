@@ -6,6 +6,7 @@ import { JobTracker } from './components/JobTracker';
 import { AgentRunner } from './components/AgentRunner';
 import { ProfileManager } from './components/ProfileManager';
 import { SettingsManager } from './components/SettingsManager';
+import { EmailScanner } from './components/EmailScanner';
 
 function AppContent() {
   const { view } = useAppState();
@@ -17,6 +18,7 @@ function AppContent() {
         {view === 'dashboard' && <Dashboard />}
         {view === 'tracker' && <JobTracker />}
         {view === 'runner' && <AgentRunner />}
+        {view === 'email-scan' && <EmailScanner />}
         {view === 'profile' && <ProfileManager />}
         {view === 'settings' && <SettingsManager />}
       </main>

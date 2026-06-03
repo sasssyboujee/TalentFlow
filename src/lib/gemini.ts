@@ -390,3 +390,65 @@ Output MUST be valid JSON matching this schema:
   }
 }
 
+export interface EmailAnalysisResult {
+  suggestions: {
+    emailId: string;
+    detectedCompany: string;
+    detectedRole: string;
+    suggestedStatus: 'applied' | 'interview' | 'rejected' | 'offer' | 'unknown';
+    reason: string;
+  }[];
+}
+
+export async function analyzeEmailsWithAI(
+  emails: { id: string; subject: string; from: string; date: string; body: string }[]
+): Promise<EmailAnalysisResult> {
+  if (emails.length === 0) return { suggestions: [] };
+
+  const prompt = `
+You are an expert recruitment assistant analyzing a list of candidate emails. For each email, determine if it is related to a job application status update and extract the relevant metadata.
+
+EMAILS TO ANALYZE:
+${emails.map((email, idx) => `
+--- EMAIL ${idx + 1} ---
+ID: ${email.id}
+Subject: ${email.subject}
+From: ${email.from}
+Date: ${email.date}
+Body: ${email.body}
+`).join('\n')}
+
+INSTRUCTIONS:
+1. For each email, classify if it represents a change in a job application status:
+   - Application Confirmation (e.g. "We received your application", "Thank you for applying"): suggest "applied".
+   - Interview Schedule/Request (e.g. "schedule a technical screen", "invite you to interview", "calendly link"): suggest "interview".
+   - Rejection (e.g. "not moving forward at this time", "will not be proceeding", "unsuccessful"): suggest "rejected".
+   - Job Offer (e.g. "offer of employment", "pleased to offer you", "your offer letter"): suggest "offer".
+   - Unrelated or cannot determine: suggest "unknown".
+2. Extract the "detectedCompany" name and "detectedRole" title. Be precise.
+3. Write a concise 1-sentence "reason" summarizing the email's content (e.g., "Google sent an application confirmation email.").
+4. Return a JSON object with a "suggestions" array matching the schema below.
+
+Output MUST be valid JSON matching this schema:
+{
+  "suggestions": [
+    {
+      "emailId": "string",
+      "detectedCompany": "string",
+      "detectedRole": "string",
+      "suggestedStatus": "applied" | "interview" | "rejected" | "offer" | "unknown",
+      "reason": "string"
+    }
+  ]
+}
+`;
+
+  try {
+    const responseText = await generateLLMResponse(prompt);
+    return JSON.parse(responseText) as EmailAnalysisResult;
+  } catch (error: any) {
+    console.error('Error analyzing emails with AI:', error);
+    throw error;
+  }
+}
+
