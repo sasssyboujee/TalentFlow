@@ -138,6 +138,7 @@ interface AppStateContextType {
   setProfile: (profile: UserProfile) => void;
   applications: JobApplication[];
   addApplication: (app: JobApplication) => void;
+  addApplications: (apps: JobApplication[]) => void;
   deleteApplication: (id: string) => void;
   updateApplicationStatus: (id: string, status: JobApplication['status']) => void;
   updateApplicationLogs: (id: string, logs: AgentLog[], incremental?: boolean) => void;
@@ -243,22 +244,40 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addApplication = (app: JobApplication) => {
-    saveApplications([app, ...applications]);
+    setApplicationsState(prev => {
+      const nextApps = [app, ...prev];
+      localStorage.setItem('agent_applications', JSON.stringify(nextApps));
+      return nextApps;
+    });
+  };
+
+  const addApplications = (newApps: JobApplication[]) => {
+    setApplicationsState(prev => {
+      const nextApps = [...newApps, ...prev];
+      localStorage.setItem('agent_applications', JSON.stringify(nextApps));
+      return nextApps;
+    });
   };
 
   const deleteApplication = (id: string) => {
-    saveApplications(applications.filter(app => app.id !== id));
+    setApplicationsState(prev => {
+      const nextApps = prev.filter(app => app.id !== id);
+      localStorage.setItem('agent_applications', JSON.stringify(nextApps));
+      return nextApps;
+    });
   };
 
   const updateApplicationStatus = (id: string, status: JobApplication['status']) => {
-    saveApplications(
-      applications.map(app => app.id === id ? { ...app, status } : app)
-    );
+    setApplicationsState(prev => {
+      const nextApps = prev.map(app => app.id === id ? { ...app, status } : app);
+      localStorage.setItem('agent_applications', JSON.stringify(nextApps));
+      return nextApps;
+    });
   };
 
   const updateApplicationLogs = (id: string, logs: AgentLog[], incremental = false) => {
-    saveApplications(
-      applications.map(app => {
+    setApplicationsState(prev => {
+      const nextApps = prev.map(app => {
         if (app.id === id) {
           return {
             ...app,
@@ -266,14 +285,18 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           };
         }
         return app;
-      })
-    );
+      });
+      localStorage.setItem('agent_applications', JSON.stringify(nextApps));
+      return nextApps;
+    });
   };
 
   const updateApplicationDetails = (id: string, updates: Partial<JobApplication>) => {
-    saveApplications(
-      applications.map(app => app.id === id ? { ...app, ...updates } : app)
-    );
+    setApplicationsState(prev => {
+      const nextApps = prev.map(app => app.id === id ? { ...app, ...updates } : app);
+      localStorage.setItem('agent_applications', JSON.stringify(nextApps));
+      return nextApps;
+    });
   };
 
   // Persist Email Suggestions
@@ -301,7 +324,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     <AppStateContext.Provider value={{
       view, setView,
       profile, setProfile,
-      applications, addApplication, deleteApplication, updateApplicationStatus, updateApplicationLogs, updateApplicationDetails,
+      applications, addApplication, addApplications, deleteApplication, updateApplicationStatus, updateApplicationLogs, updateApplicationDetails,
       settings, updateSettings,
       prefilledJob, setPrefilledJob,
       emailSuggestions, saveSuggestions, updateSuggestionStatus

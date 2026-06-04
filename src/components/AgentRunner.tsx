@@ -72,7 +72,7 @@ interface AgentRunnerProps {
 }
 
 export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
-  const { profile, addApplication, setView, settings, applications, prefilledJob, setPrefilledJob } = useAppState();
+  const { profile, addApplication, addApplications, setView, settings, applications, prefilledJob, setPrefilledJob } = useAppState();
   const [inputMode, setInputMode] = useState<'url' | 'text' | 'discover'>('url');
   const [url, setUrl] = useState('');
   const [jdText, setJdText] = useState('');
@@ -348,8 +348,8 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
     const jobsToImport = discoveredJobs.filter((_, idx) => !!selectedJobIds[idx]);
     if (jobsToImport.length === 0) return;
 
-    jobsToImport.forEach((job, index) => {
-      const newApp = {
+    const newApps = jobsToImport.map((job, index) => {
+      return {
         id: `app-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 5)}`,
         company: job.company || 'Unknown',
         role: job.role || 'Unknown Role',
@@ -374,9 +374,9 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
           }
         ]
       };
-      addApplication(newApp);
     });
 
+    addApplications(newApps);
     playSuccessChime();
     setDiscoveredJobs([]);
     if (onClose) {

@@ -12,6 +12,43 @@ const ai = new GoogleGenAI({
   apiKey: apiKey || '',
 });
 
+function cleanJSONString(text: string): string {
+  let cleaned = text.trim();
+  
+  // Remove markdown code blocks if present
+  if (cleaned.startsWith('```')) {
+    const match = cleaned.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+    if (match) {
+      cleaned = match[1].trim();
+    } else {
+      cleaned = cleaned.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+    }
+  }
+  
+  // Find first root structure and slice
+  const firstBrace = cleaned.indexOf('{');
+  const firstBracket = cleaned.indexOf('[');
+  let startIdx = -1;
+  let endChar = '';
+  
+  if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+    startIdx = firstBrace;
+    endChar = '}';
+  } else if (firstBracket !== -1) {
+    startIdx = firstBracket;
+    endChar = ']';
+  }
+  
+  if (startIdx !== -1) {
+    const lastIdx = cleaned.lastIndexOf(endChar);
+    if (lastIdx !== -1 && lastIdx > startIdx) {
+      cleaned = cleaned.substring(startIdx, lastIdx + 1);
+    }
+  }
+  
+  return cleaned;
+}
+
 async function generateLLMResponse(prompt: string): Promise<string> {
   let activeProvider = 'gemini';
   let geminiModel = 'gemini-3.5-flash';
@@ -69,7 +106,7 @@ async function generateLLMResponse(prompt: string): Promise<string> {
           throw new Error('Invalid response format from DeepSeek API');
         }
 
-        return choice.message.content;
+        return cleanJSONString(choice.message.content);
       } else {
         // Gemini Flow
         let client = ai;
@@ -87,7 +124,7 @@ async function generateLLMResponse(prompt: string): Promise<string> {
         if (!response.text) {
           throw new Error('No response from Gemini');
         }
-        return response.text;
+        return cleanJSONString(response.text);
       }
     } catch (error: any) {
       const errorStr = JSON.stringify(error) || String(error);
