@@ -140,7 +140,9 @@ interface AppStateContextType {
   addApplication: (app: JobApplication) => void;
   addApplications: (apps: JobApplication[]) => void;
   deleteApplication: (id: string) => void;
+  deleteApplications: (ids: string[]) => void;
   updateApplicationStatus: (id: string, status: JobApplication['status']) => void;
+  updateApplicationsStatus: (ids: string[], status: JobApplication['status']) => void;
   updateApplicationLogs: (id: string, logs: AgentLog[], incremental?: boolean) => void;
   updateApplicationDetails: (id: string, updates: Partial<JobApplication>) => void;
   settings: SystemSettings;
@@ -267,9 +269,25 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const deleteApplications = (ids: string[]) => {
+    setApplicationsState(prev => {
+      const nextApps = prev.filter(app => !ids.includes(app.id));
+      localStorage.setItem('agent_applications', JSON.stringify(nextApps));
+      return nextApps;
+    });
+  };
+
   const updateApplicationStatus = (id: string, status: JobApplication['status']) => {
     setApplicationsState(prev => {
       const nextApps = prev.map(app => app.id === id ? { ...app, status } : app);
+      localStorage.setItem('agent_applications', JSON.stringify(nextApps));
+      return nextApps;
+    });
+  };
+
+  const updateApplicationsStatus = (ids: string[], status: JobApplication['status']) => {
+    setApplicationsState(prev => {
+      const nextApps = prev.map(app => ids.includes(app.id) ? { ...app, status } : app);
       localStorage.setItem('agent_applications', JSON.stringify(nextApps));
       return nextApps;
     });
@@ -324,7 +342,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     <AppStateContext.Provider value={{
       view, setView,
       profile, setProfile,
-      applications, addApplication, addApplications, deleteApplication, updateApplicationStatus, updateApplicationLogs, updateApplicationDetails,
+      applications, addApplication, addApplications, deleteApplication, deleteApplications, updateApplicationStatus, updateApplicationsStatus, updateApplicationLogs, updateApplicationDetails,
       settings, updateSettings,
       prefilledJob, setPrefilledJob,
       emailSuggestions, saveSuggestions, updateSuggestionStatus

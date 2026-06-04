@@ -10,6 +10,19 @@ import { gradeInterviewAnswer, tailorJobAssets } from '../lib/gemini';
 import { AgentRunner } from './AgentRunner';
 import clsx from 'clsx';
 
+const getClickableUrl = (url: string, role: string, company: string) => {
+  if (
+    !url ||
+    url.includes('placeholder') ||
+    url.includes('example.com') ||
+    url.includes('Manual Input') ||
+    (url.includes('linkedin.com/jobs/view/') && (url.includes('123456') || url.includes('...') || url.length < 55))
+  ) {
+    return `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(`${role} ${company}`)}`;
+  }
+  return url;
+};
+
 const COLUMNS: { 
   id: ApplicationStatus; 
   label: string; 
@@ -22,11 +35,12 @@ const COLUMNS: {
 ];
 
 export function JobTracker() {
-  const { applications, updateApplicationStatus, profile } = useAppState();
+  const { applications, updateApplicationStatus, profile, deleteApplications, updateApplicationsStatus } = useAppState();
   const [selectedApp, setSelectedApp] = useState<JobApplication | null>(null);
   const [draggedOverColumn, setDraggedOverColumn] = useState<ApplicationStatus | null>(null);
   const [expandedColumn, setExpandedColumn] = useState<ApplicationStatus | null>(null);
   const [isRunnerOpen, setIsRunnerOpen] = useState(false);
+  const [selectedAppIds, setSelectedAppIds] = useState<Record<string, boolean>>({});
 
   const getAppsByStatus = (status: ApplicationStatus) => 
     applications.filter(app => app.status === status);
@@ -39,8 +53,10 @@ export function JobTracker() {
     ? applications.find(app => app.id === selectedApp.id) || null
     : null;
 
+  const selectedCount = Object.values(selectedAppIds).filter(Boolean).length;
+
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden bg-canvas">
+    <div className="w-full h-full flex flex-col overflow-hidden bg-canvas relative">
       <header className="px-12 py-8 bg-canvas border-b border-hairline-light shrink-0 text-left max-w-7xl mx-auto w-full flex justify-between items-center">
         <div>
           <h1 className="text-display-md text-ink mb-2 font-semibold tracking-[-1px] uppercase">Job Tracker</h1>
@@ -115,6 +131,13 @@ export function JobTracker() {
                         onStatusChange={(newStatus) => updateApplicationStatus(app.id, newStatus)} 
                         onSelect={() => setSelectedApp(app)}
                         onDragEnd={() => setDraggedOverColumn(null)}
+                        isSelected={!!selectedAppIds[app.id]}
+                        onToggleSelect={() => {
+                          setSelectedAppIds(prev => ({
+                            ...prev,
+                            [app.id]: !prev[app.id]
+                          }));
+                        }}
                       />
                     ))
                   )}
@@ -140,6 +163,13 @@ export function JobTracker() {
           onClose={() => setExpandedColumn(null)}
           onSelectJob={(app) => setSelectedApp(app)}
           updateApplicationStatus={updateApplicationStatus}
+          selectedAppIds={selectedAppIds}
+          onToggleSelect={(id) => {
+            setSelectedAppIds(prev => ({
+              ...prev,
+              [id]: !prev[id]
+            }));
+          }}
         />
       )}
 
@@ -151,6 +181,58 @@ export function JobTracker() {
         </div>,
         document.body
       )}
+
+      {/* Floating Bulk Actions Toolbar */}
+      {selectedCount > 0 && (
+        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-canvas-dark/95 border border-[#333] shadow-2xl rounded-full px-6 py-3 flex items-center gap-6 z-40 text-on-dark animate-in slide-in-from-bottom-5 duration-200">
+          <span className="text-xs font-mono font-bold tracking-wider text-[#d4d4d4] shrink-0">
+            {selectedCount} Selected
+          </span>
+          <div className="w-[1px] h-5 bg-[#333] shrink-0" />
+          
+          <div className="relative group shrink-0">
+            <button className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2d2d2d] hover:bg-[#3d3d3d] border border-[#444] rounded-md text-xs font-semibold text-[#d4d4d4] hover:text-white cursor-pointer transition-colors border-none outline-none">
+              <span>Move to</span>
+              <ChevronDown className="w-3 h-3 text-current inline" />
+            </button>
+            <div className="absolute bottom-10 left-0 w-44 bg-[#1e1e1e] border border-[#333] rounded-md shadow-2xl hidden group-hover:block py-1 z-50">
+              {COLUMNS.map(col => (
+                <button
+                  key={col.id}
+                  onClick={() => {
+                    const ids = Object.keys(selectedAppIds).filter(id => selectedAppIds[id]);
+                    updateApplicationsStatus(ids, col.id);
+                    setSelectedAppIds({});
+                  }}
+                  className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-[#2d2d2d] text-[#d4d4d4] hover:text-white bg-transparent border-none cursor-pointer"
+                >
+                  {col.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              const ids = Object.keys(selectedAppIds).filter(id => selectedAppIds[id]);
+              if (confirm(`Are you sure you want to delete the ${selectedCount} selected applications?`)) {
+                deleteApplications(ids);
+                setSelectedAppIds({});
+              }
+            }}
+            className="px-3.5 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/30 text-rose-300 rounded-md text-xs font-semibold cursor-pointer transition-colors border-none"
+          >
+            Delete
+          </button>
+
+          <button
+            onClick={() => setSelectedAppIds({})}
+            className="text-xs font-semibold text-[#8a8a8a] hover:text-white transition-colors bg-transparent border-none cursor-pointer"
+          >
+            Deselect
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -161,9 +243,11 @@ interface JobCardProps {
   onStatusChange: (s: ApplicationStatus) => void;
   onSelect: () => void;
   onDragEnd?: () => void;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
-function JobCard({ app, onStatusChange, onSelect, onDragEnd }: JobCardProps) {
+function JobCard({ app, onStatusChange, onSelect, onDragEnd, isSelected = false, onToggleSelect }: JobCardProps) {
   const { deleteApplication } = useAppState();
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -171,7 +255,9 @@ function JobCard({ app, onStatusChange, onSelect, onDragEnd }: JobCardProps) {
     onSelect();
   };
 
-  const cardBg = 'bg-canvas border-hairline-light hover:bg-surface-soft';
+  const cardBg = isSelected 
+    ? 'bg-primary/5 border-primary shadow-product'
+    : 'bg-canvas border-hairline-light hover:bg-surface-soft';
   const textTitle = 'text-ink';
   const textSub = 'text-mute';
 
@@ -190,8 +276,19 @@ function JobCard({ app, onStatusChange, onSelect, onDragEnd }: JobCardProps) {
       className={`w-full p-5 rounded-lg border transition-all cursor-grab active:cursor-grabbing select-none text-left transform-gpu relative hover:z-20 hover:shadow-product ${cardBg}`}
     >
       <div className="flex justify-between items-start mb-1.5">
-        <h4 className={`text-sm font-bold tracking-tight line-clamp-1 ${textTitle}`} title={app.role}>{app.role}</h4>
-        <div className="relative group stop-propagation">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => {
+              e.stopPropagation();
+              onToggleSelect?.();
+            }}
+            className="accent-primary cursor-pointer shrink-0 stop-propagation"
+          />
+          <h4 className={`text-sm font-bold tracking-tight line-clamp-1 ${textTitle}`} title={app.role}>{app.role}</h4>
+        </div>
+        <div className="relative group stop-propagation shrink-0 ml-2">
           <button className={`opacity-50 hover:opacity-100 transition-opacity ${textTitle}`}>
             <MoreVertical className="w-4 h-4" />
           </button>
@@ -258,7 +355,7 @@ function JobCard({ app, onStatusChange, onSelect, onDragEnd }: JobCardProps) {
               ✓ Synced
             </span>
           )}
-          <a href={app.url} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-1 transition-colors hover:text-primary`}>
+          <a href={getClickableUrl(app.url, app.role, app.company)} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-1 transition-colors hover:text-primary`}>
             View JD <ExternalLink className="w-3 h-3" />
           </a>
         </div>
@@ -546,7 +643,7 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
           </div>
           <div className="flex items-center gap-4">
             <a 
-              href={app.url} 
+              href={getClickableUrl(app.url, app.role, app.company)} 
               target="_blank" 
               rel="noopener noreferrer" 
               className="flex items-center gap-2 px-5 py-2.5 bg-surface-soft hover:bg-faint text-ink rounded-md text-sm font-semibold transition-colors border border-hairline-light"
@@ -1091,9 +1188,11 @@ interface ExpandedColumnModalProps {
   onClose: () => void;
   onSelectJob: (app: JobApplication) => void;
   updateApplicationStatus: (id: string, status: ApplicationStatus) => void;
+  selectedAppIds: Record<string, boolean>;
+  onToggleSelect: (id: string) => void;
 }
 
-function ExpandedColumnModal({ column, apps, onClose, onSelectJob, updateApplicationStatus }: ExpandedColumnModalProps) {
+function ExpandedColumnModal({ column, apps, onClose, onSelectJob, updateApplicationStatus, selectedAppIds, onToggleSelect }: ExpandedColumnModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredApps = apps.filter(app => 
@@ -1158,6 +1257,8 @@ function ExpandedColumnModal({ column, apps, onClose, onSelectJob, updateApplica
                   app={app} 
                   onStatusChange={(newStatus) => updateApplicationStatus(app.id, newStatus)} 
                   onSelect={() => onSelectJob(app)}
+                  isSelected={!!selectedAppIds[app.id]}
+                  onToggleSelect={() => onToggleSelect(app.id)}
                 />
               ))}
             </div>

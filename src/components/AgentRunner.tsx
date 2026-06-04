@@ -353,7 +353,7 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
         id: `app-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 5)}`,
         company: job.company || 'Unknown',
         role: job.role || 'Unknown Role',
-        url: job.url || 'https://linkedin.com',
+        url: `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(`${job.role} ${job.company}`)}`,
         description: job.description,
         status: 'ready' as const,
         dateAdded: new Date().toISOString(),
