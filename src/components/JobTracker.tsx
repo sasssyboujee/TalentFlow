@@ -32,6 +32,7 @@ const COLUMNS: {
   { id: 'ready', label: 'Ready to Apply', badgeClass: 'bg-[#fb923c]/15 text-[#d97706] dark:text-[#fb923c] border border-[#fb923c]/20' },
   { id: 'applied', label: 'Applied', badgeClass: 'bg-accent-light-blue/10 text-accent-light-blue border border-accent-light-blue/20' },
   { id: 'interview', label: 'Interview', badgeClass: 'bg-primary/10 text-primary border border-primary/20' },
+  { id: 'offer', label: 'Offered', badgeClass: 'bg-accent-teal/10 text-accent-teal border border-accent-teal/20' },
   { id: 'rejected', label: 'Rejected', badgeClass: 'bg-accent-danger/10 text-accent-danger border border-accent-danger/20' },
 ];
 

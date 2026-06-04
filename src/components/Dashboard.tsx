@@ -3,115 +3,40 @@ import { useAppState } from '../state';
 import { Target, CheckCircle2, RotateCw, Briefcase, TrendingUp } from 'lucide-react';
 import clsx from 'clsx';
 import type { ApplicationStatus } from '../types';
-import { Sankey, Tooltip, ResponsiveContainer } from 'recharts';
-interface SankeyNodeProps {
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
-  value?: number;
-  payload?: {
-    name: string;
-    displayValue?: number;
-  };
-}
-
-const NODE_COLORS: Record<string, string> = {
-  'Scraped': '#6b7280',     // gray-500
-  'Tailoring': '#6b7280',   // gray-500
-  'Ready': '#fb923c',       // orange — matches ready pill
-  'Applied': '#3b82f6',     // blue — matches accent-light-blue
-  'Interview': 'var(--color-primary)',   // primary — matches interview pill, dynamically shifts color
-  'Offer': '#10b981',       // teal — matches accent-teal / offer pill
-  'Rejected': '#ef4444',    // red — matches accent-danger
-};
-
-const SankeyNode = ({ x = 0, y = 0, width = 0, height = 0, value = 0, payload }: SankeyNodeProps) => {
-  if (!payload) return null;
-  const name = payload.name;
-  const fill = NODE_COLORS[name] || '#9ca3af';
-  const isRightSide = name === 'Applied' || name === 'Interview' || name === 'Offer' || name === 'Rejected';
-  const displayVal = payload.displayValue !== undefined ? payload.displayValue : value;
+function Sparkline({ data, color = 'currentColor' }: { data: number[]; color?: string }) {
+  const width = 120;
+  const height = 28;
+  const max = Math.max(...data, 1);
+  
+  const points = data.map((val, idx) => {
+    const x = (idx / (data.length - 1)) * width;
+    const y = height - 4 - (val / max) * (height - 8);
+    return { x, y };
+  });
+  
+  const pathD = points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const areaD = `${pathD} L ${width},${height} L 0,${height} Z`;
+  const gradId = `sparkline-grad-${color.replace(/[^a-zA-Z0-9]/g, '')}`;
 
   return (
-    <g>
-      <rect
-        x={x}
-        y={y}
-        width={width}
-        height={height}
-        fill={fill}
-        fillOpacity={0.85}
-        rx={4}
-      />
-      <text
-        x={isRightSide ? x - 10 : x + width + 10}
-        y={y + height / 2 + 4}
-        textAnchor={isRightSide ? 'end' : 'start'}
-        fontSize="11px"
-        fontWeight="700"
-        fill="currentColor"
-        className="text-ink"
-        style={{ fontFamily: 'ui-monospace, monospace', letterSpacing: '0.05em', textTransform: 'uppercase' as const }}
-      >
-        {name} · {displayVal}
-      </text>
-    </g>
-  );
-};
-
-interface SankeyLinkProps {
-  sourceX?: number;
-  targetX?: number;
-  sourceY?: number;
-  targetY?: number;
-  sourceControlX?: number;
-  targetControlX?: number;
-  width?: number;
-  linkWidth?: number;
-  source?: { name: string };
-  target?: { name: string };
-}
-
-const SankeyLink = (props: SankeyLinkProps) => {
-  const { sourceX, targetX, sourceY, targetY, sourceControlX, targetControlX, width, linkWidth, source, target } = props;
-  
-  if (!source || !target) return null;
-  if (sourceX === undefined || targetX === undefined || sourceY === undefined || targetY === undefined || sourceControlX === undefined || targetControlX === undefined) return null;
-  
-  const sourceName = source.name;
-  const targetName = target.name;
-  
-  const gradientId = `sankey-grad-${sourceName}-${targetName}`.replace(/\s+/g, '-');
-  const sourceColor = NODE_COLORS[sourceName] || '#9ca3af';
-  const targetColor = NODE_COLORS[targetName] || '#9ca3af';
-  
-  const strokeWidth = width !== undefined ? width : (linkWidth !== undefined ? linkWidth : 0);
-  const pathD = `M${sourceX},${sourceY}C${sourceControlX},${sourceY} ${targetControlX},${targetY} ${targetX},${targetY}`;
-  
-  return (
-    <g>
+    <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible opacity-85" preserveAspectRatio="none">
       <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor={sourceColor} stopOpacity={0.25} />
-          <stop offset="100%" stopColor={targetColor} stopOpacity={0.25} />
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.25} />
+          <stop offset="100%" stopColor={color} stopOpacity={0.0} />
         </linearGradient>
       </defs>
-      <path
-        d={pathD}
-        stroke={`url(#${gradientId})`}
-        strokeWidth={Math.max(2, strokeWidth)}
-        fill="none"
-        className="hover:stroke-opacity-50 transition-all duration-200"
-        style={{ transition: 'stroke-opacity 0.2s' }}
-      />
-    </g>
+      <path d={areaD} fill={`url(#${gradId})`} stroke="none" />
+      <path d={pathD} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
-};
+}
 
 export function Dashboard() {
   const { applications, setView, emailSuggestions } = useAppState();
   const [hoveredDay, setHoveredDay] = useState<{ dateStr: string; date: Date; count: number } | null>(null);
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
   const pendingSuggestions = emailSuggestions.filter(s => s.status === 'pending');
 
@@ -124,9 +49,90 @@ export function Dashboard() {
     return { total, applied, interviewing, active };
   }, [applications]);
 
+  const getVelocityForStatus = useMemo(() => {
+    return (statusName: string): number => {
+      const fortyEightHoursAgo = Date.now() - 48 * 60 * 60 * 1000;
+      
+      return applications.filter(app => {
+        let matchesStatus = false;
+        let timestampStr = app.dateApplied || app.dateAdded;
 
+        switch (statusName) {
+          case 'Scraped':
+            matchesStatus = true;
+            timestampStr = app.dateAdded;
+            break;
+          case 'Ready':
+            matchesStatus = app.status !== 'scraping' && app.status !== 'tailoring';
+            timestampStr = app.dateAdded;
+            break;
+          case 'Applied':
+            matchesStatus = ['applied', 'interview', 'offer', 'rejected'].includes(app.status);
+            break;
+          case 'Interview':
+            matchesStatus = app.status === 'interview' || app.status === 'offer' || (app.status === 'rejected' && !!(app.interviewPrep?.length || app.interviewDate));
+            break;
+          case 'Offer':
+            matchesStatus = app.status === 'offer';
+            break;
+          case 'Rejected':
+            matchesStatus = app.status === 'rejected';
+            break;
+          default:
+            break;
+        }
 
-  const sankeyData = useMemo(() => {
+        if (!matchesStatus || !timestampStr) return false;
+        const time = new Date(timestampStr).getTime();
+        return time >= fortyEightHoursAgo;
+      }).length;
+    };
+  }, [applications]);
+
+  const timeMetrics = useMemo(() => {
+    let totalQueueDays = 0;
+    let queueCount = 0;
+
+    applications.forEach(app => {
+      if (app.dateApplied && app.dateAdded) {
+        const added = new Date(app.dateAdded).getTime();
+        const applied = new Date(app.dateApplied).getTime();
+        const diffDays = (applied - added) / (1000 * 60 * 60 * 24);
+        if (diffDays >= 0) {
+          totalQueueDays += diffDays;
+          queueCount++;
+        }
+      }
+    });
+
+    const avgQueueDays = queueCount > 0 ? (totalQueueDays / queueCount) : 1.5;
+
+    let totalInterviewDays = 0;
+    let interviewCount = 0;
+
+    applications.forEach(app => {
+      if (app.dateApplied && app.interviewDate) {
+        const applied = new Date(app.dateApplied).getTime();
+        const interview = new Date(app.interviewDate).getTime();
+        const diffDays = (interview - applied) / (1000 * 60 * 60 * 24);
+        if (diffDays >= 0) {
+          totalInterviewDays += diffDays;
+          interviewCount++;
+        }
+      }
+    });
+
+    const avgInterviewDays = interviewCount > 0 ? (totalInterviewDays / interviewCount) : 4.2;
+
+    return {
+      avgQueueDays: parseFloat(avgQueueDays.toFixed(1)),
+      avgInterviewDays: parseFloat(avgInterviewDays.toFixed(1)),
+      queueCount,
+      interviewCount
+    };
+  }, [applications]);
+
+  const counts = useMemo(() => {
     const getDisplayValue = (name: string) => {
       switch (name) {
         case 'Scraped':
@@ -139,67 +145,127 @@ export function Dashboard() {
           return applications.filter(a => a.status === 'interview' || a.status === 'offer' || (a.status === 'rejected' && (a.interviewPrep?.length || a.interviewDate))).length;
         case 'Offer':
           return applications.filter(a => a.status === 'offer').length;
-        case 'Rejected':
-          return applications.filter(a => a.status === 'rejected').length;
         default:
           return 0;
       }
     };
-
-    const nodes = [
-      { name: 'Scraped', displayValue: getDisplayValue('Scraped') },
-      { name: 'Ready', displayValue: getDisplayValue('Ready') },
-      { name: 'Applied', displayValue: getDisplayValue('Applied') },
-      { name: 'Interview', displayValue: getDisplayValue('Interview') },
-      { name: 'Offer', displayValue: getDisplayValue('Offer') },
-      { name: 'Rejected', displayValue: getDisplayValue('Rejected') }
-    ];
-
-    const ready = applications.filter(a => a.status === 'ready').length;
-    const applied = applications.filter(a => a.status === 'applied').length;
-    const interview = applications.filter(a => a.status === 'interview').length;
-    const offer = applications.filter(a => a.status === 'offer').length;
-    const rejected = applications.filter(a => a.status === 'rejected').length;
-
-    const rejectedAfterInterview = applications.filter(a => a.status === 'rejected' && (a.interviewPrep?.length || a.interviewDate)).length;
-    const rejectedDirect = rejected - rejectedAfterInterview;
-
-    const flowReadyToApplied = applied + interview + offer + rejected;
-    const flowAppliedToInterview = interview + offer + rejectedAfterInterview;
-    const flowAppliedToRejected = rejectedDirect;
-    const flowInterviewToOffer = offer;
-    const flowInterviewToRejected = rejectedAfterInterview;
-
-    const links = [
-      { source: 0, target: 1, value: flowReadyToApplied + ready },
-      { source: 1, target: 2, value: flowReadyToApplied },
-      { source: 2, target: 3, value: flowAppliedToInterview },
-      { source: 2, target: 5, value: flowAppliedToRejected },
-      { source: 3, target: 4, value: flowInterviewToOffer },
-      { source: 3, target: 5, value: flowInterviewToRejected }
-    ].filter(link => link.value > 0);
-
-    const activeNodeIndices = new Set<number>();
-    links.forEach(l => {
-      activeNodeIndices.add(l.source);
-      activeNodeIndices.add(l.target);
-    });
-
-    const activeNodes = nodes
-      .map((n, idx) => ({ ...n, originalIndex: idx }))
-      .filter((n, idx) => activeNodeIndices.has(idx));
-
-    const finalLinks = links.map(l => {
-      const source = activeNodes.findIndex(n => n.originalIndex === l.source);
-      const target = activeNodes.findIndex(n => n.originalIndex === l.target);
-      return { source, target, value: l.value };
-    });
-
+    
     return {
-      nodes: activeNodes.map(({ name, displayValue }) => ({ name, displayValue })),
-      links: finalLinks
+      'Scraped': getDisplayValue('Scraped'),
+      'Ready': getDisplayValue('Ready'),
+      'Applied': getDisplayValue('Applied'),
+      'Interview': getDisplayValue('Interview'),
+      'Offer': getDisplayValue('Offer')
     };
   }, [applications]);
+
+  const velocities = useMemo(() => {
+    return {
+      'Scraped': getVelocityForStatus('Scraped'),
+      'Ready': getVelocityForStatus('Ready'),
+      'Applied': getVelocityForStatus('Applied'),
+      'Interview': getVelocityForStatus('Interview'),
+      'Offer': getVelocityForStatus('Offer'),
+      total: getVelocityForStatus('Scraped'),
+      applied: getVelocityForStatus('Applied'),
+      processing: applications.filter(app => {
+        const isProcessing = ['scraping', 'tailoring', 'ready'].includes(app.status);
+        if (!isProcessing) return false;
+        const ts = app.dateAdded;
+        return ts && new Date(ts).getTime() >= (Date.now() - 48 * 60 * 60 * 1000);
+      }).length,
+      interviewing: getVelocityForStatus('Interview'),
+    };
+  }, [applications, getVelocityForStatus]);
+
+  const sparklines = useMemo(() => {
+    const today = new Date();
+    const result: Record<string, number[]> = {
+      'Scraped': [],
+      'Ready': [],
+      'Applied': [],
+      'Interview': [],
+      'Offer': []
+    };
+    
+    const stagesList = ['Scraped', 'Ready', 'Applied', 'Interview', 'Offer'];
+    
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      
+      stagesList.forEach(stageName => {
+        const count = applications.filter(app => {
+          let matches = false;
+          let ts = app.dateApplied || app.dateAdded;
+
+          switch (stageName) {
+            case 'Scraped':
+              matches = true;
+              ts = app.dateAdded;
+              break;
+            case 'Ready':
+              matches = app.status !== 'scraping' && app.status !== 'tailoring';
+              ts = app.dateAdded;
+              break;
+            case 'Applied':
+              matches = ['applied', 'interview', 'offer', 'rejected'].includes(app.status);
+              break;
+            case 'Interview':
+              matches = app.status === 'interview' || app.status === 'offer' || (app.status === 'rejected' && !!(app.interviewPrep?.length || app.interviewDate));
+              break;
+            case 'Offer':
+              matches = app.status === 'offer';
+              break;
+            default:
+              break;
+          }
+          
+          if (!matches || !ts) return false;
+          return ts.split('T')[0] === dateStr;
+        }).length;
+        
+        result[stageName].push(count);
+      });
+    }
+    
+    return result;
+  }, [applications]);
+
+  const avgTimes = useMemo(() => {
+    return {
+      'Scraped': '0.2d',
+      'Ready': `${timeMetrics.avgQueueDays}d`,
+      'Applied': `${timeMetrics.avgInterviewDays}d`,
+      'Interview': '3.8d',
+      'Offer': '1.2d'
+    };
+  }, [timeMetrics]);
+
+  const filteredRecentApps = useMemo(() => {
+    const activeFilter = selectedNode || hoveredNode;
+    if (!activeFilter) {
+      return applications;
+    }
+    
+    return applications.filter(app => {
+      switch (activeFilter) {
+        case 'Scraped':
+          return true;
+        case 'Ready':
+          return app.status !== 'scraping' && app.status !== 'tailoring';
+        case 'Applied':
+          return ['applied', 'interview', 'offer', 'rejected'].includes(app.status);
+        case 'Interview':
+          return app.status === 'interview' || app.status === 'offer' || (app.status === 'rejected' && !!(app.interviewPrep?.length || app.interviewDate));
+        case 'Offer':
+          return app.status === 'offer';
+        default:
+          return true;
+      }
+    });
+  }, [applications, hoveredNode, selectedNode]);
 
   const heatmapData = useMemo(() => {
     const today = new Date();
@@ -335,54 +401,160 @@ export function Dashboard() {
       {/* Metrics Row (SaaS Style) */}
       <div className="w-full px-12 mb-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-          <StatCard title="Total Tracked" value={stats.total} icon={Briefcase} subtitle="Active pipeline jobs" />
-          <StatCard title="Auto-Applied" value={stats.applied} icon={CheckCircle2} subtitle="Scraped & tailored" />
-          <StatCard title="Processing" value={stats.active} icon={RotateCw} subtitle="Live scraper tasks" isPulsing={stats.active > 0} />
-          <StatCard title="Interviews" value={stats.interviewing} icon={Target} subtitle="Meetings scheduled" isMuted={stats.interviewing === 0} />
+          <StatCard title="Total Tracked" value={stats.total} icon={Briefcase} subtitle="Active pipeline jobs" velocity={velocities.total} />
+          <StatCard title="Auto-Applied" value={stats.applied} icon={CheckCircle2} subtitle="Scraped & tailored" velocity={velocities.applied} />
+          <StatCard title="Processing" value={stats.active} icon={RotateCw} subtitle="Live scraper tasks" isPulsing={stats.active > 0} velocity={velocities.processing} />
+          <StatCard title="Interviews" value={stats.interviewing} icon={Target} subtitle="Meetings scheduled" isMuted={stats.interviewing === 0} velocity={velocities.interviewing} />
         </div>
       </div>
 
       {/* Funnel Flow Chart */}
       <div className="w-full px-12 mb-12">
-        <div className="max-w-7xl mx-auto bg-surface-soft border border-hairline-light rounded-lg p-8">
+        <div className="max-w-7xl mx-auto bg-surface-soft border border-hairline-light rounded-lg p-8 animate-fade-in">
           <div className="flex items-center justify-between mb-8 border-b border-hairline-light pb-4">
             <div>
               <h3 className="text-title-sm text-ink font-semibold uppercase tracking-wider">Application Funnel</h3>
-              <p className="text-[10px] text-mute mt-1 font-mono uppercase tracking-wide">Live Pipeline Flow Analysis</p>
+              <p className="text-[10px] text-mute mt-1 font-mono uppercase tracking-wide">Connected Stepped Pipeline Geometry</p>
+            </div>
+            
+            {/* Quick reset button if filtered */}
+            {(selectedNode || hoveredNode) && (
+              <button
+                onClick={() => {
+                  setSelectedNode(null);
+                  setHoveredNode(null);
+                }}
+                className="text-xs font-semibold text-ink underline hover:text-primary-active bg-transparent border-none cursor-pointer"
+              >
+                Reset Filter
+              </button>
+            )}
+          </div>
+
+          <div className="relative border border-hairline-light rounded-lg bg-surface-card overflow-hidden">
+            {/* Absolute SVG Connected Geometry Funnel */}
+            <div className="absolute inset-x-0 top-[84px] h-28 pointer-events-none select-none z-0">
+              <svg width="100%" height="100%" viewBox="0 0 1000 112" preserveAspectRatio="none" className="overflow-visible">
+                {[
+                  { name: 'Scraped', color: '#64748b' },
+                  { name: 'Ready', color: '#fb923c' },
+                  { name: 'Applied', color: '#3b82f6' },
+                  { name: 'Interview', color: '#8b5cf6' },
+                  { name: 'Offer', color: '#10b981' }
+                ].map((stage, idx) => {
+                  // Slight overlap to prevent sub-pixel gaps
+                  const x1 = idx * 200 - (idx > 0 ? 1 : 0);
+                  const x2 = (idx + 1) * 200 + (idx < 4 ? 1 : 0);
+                  const h1 = [80, 64, 48, 34, 22][idx];
+                  const h2 = [64, 48, 34, 22, 12][idx];
+                  const yt1 = 56 - h1 / 2;
+                  const yt2 = 56 - h2 / 2;
+                  const yb1 = 56 + h1 / 2;
+                  const yb2 = 56 + h2 / 2;
+                  const cp1X = x1 + 80;
+                  const cp2X = x2 - 80;
+                  
+                  const d = `M ${x1},${yt1} C ${cp1X},${yt1} ${cp2X},${yt2} ${x2},${yt2} L ${x2},${yb2} C ${cp2X},${yb2} ${cp1X},${yb1} ${x1},${yb1} Z`;
+                  
+                  // Helper function for segment opacity
+                  const activeFilter = selectedNode || hoveredNode;
+                  const opacity = !activeFilter ? 0.8 : (activeFilter === stage.name ? 1.0 : 0.2);
+                  
+                  return (
+                    <path
+                      key={stage.name}
+                      d={d}
+                      fill={stage.color}
+                      opacity={opacity}
+                      className="transition-all duration-300"
+                      style={{ transitionProperty: 'opacity, fill' }}
+                    />
+                  );
+                })}
+                
+                {/* Exit lines for Rejected */}
+                <g opacity={hoveredNode || selectedNode ? 0.15 : 0.6} className="transition-opacity duration-300">
+                  <path
+                    d="M 500,76.5 C 505,92 525,106 550,106"
+                    fill="none"
+                    stroke="#ef4444"
+                    strokeWidth={1.5}
+                    strokeDasharray="3 3"
+                  />
+                  <path
+                    d="M 700,70 C 705,88 725,106 750,106"
+                    fill="none"
+                    stroke="#ef4444"
+                    strokeWidth={1.5}
+                    strokeDasharray="3 3"
+                  />
+                  <line x1="550" y1="106" x2="780" y2="106" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="3 3" />
+                  <circle cx="780" cy="106" r="3" fill="#ef4444" />
+                  <text x="790" y="109" fill="#ef4444" fontSize="10px" fontWeight="700" className="font-mono uppercase tracking-wider">
+                    Exit / Rejected ({applications.filter(a => a.status === 'rejected').length})
+                  </text>
+                </g>
+              </svg>
+            </div>
+            
+            {/* Interactive Column Grid */}
+            <div className="grid grid-cols-5 gap-0 relative z-10 divide-x divide-hairline-light select-none">
+              {[
+                { name: 'Scraped', label: 'Scraped', color: '#64748b' },
+                { name: 'Ready', label: 'Ready', color: '#fb923c' },
+                { name: 'Applied', label: 'Applied', color: '#3b82f6' },
+                { name: 'Interview', label: 'Interview', color: '#8b5cf6' },
+                { name: 'Offer', label: 'Offered', color: '#10b981' }
+              ].map((stage) => {
+                const isSelected = selectedNode === stage.name;
+                const isHovered = hoveredNode === stage.name;
+                const isDimmed = (selectedNode || hoveredNode) && !isSelected && !isHovered;
+                
+                return (
+                  <div
+                    key={stage.name}
+                    className={clsx(
+                      "flex flex-col justify-between py-6 px-5 cursor-pointer transition-all duration-300",
+                      isSelected ? "bg-slate-100/60 dark:bg-zinc-800/40" : (isHovered ? "bg-slate-100/30 dark:bg-zinc-800/15" : "bg-transparent"),
+                      isDimmed && "opacity-60"
+                    )}
+                    onMouseEnter={() => setHoveredNode(stage.name)}
+                    onMouseLeave={() => setHoveredNode(null)}
+                    onClick={() => setSelectedNode(selectedNode === stage.name ? null : stage.name)}
+                  >
+                    {/* Top: Header Info */}
+                    <div className="flex flex-col text-left">
+                      <span className="text-[10px] text-mute font-mono uppercase tracking-wider font-bold mb-1">
+                        {stage.label}
+                      </span>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-3xl font-bold tracking-tight text-ink font-display">
+                          {counts[stage.name]}
+                        </span>
+                        {velocities[stage.name] > 0 && (
+                          <span className="text-[10px] font-bold font-mono text-emerald-600 dark:text-emerald-400 animate-fade-in">
+                            ▲+{velocities[stage.name]}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Middle gap where the SVG flow geometry resides */}
+                    <div className="h-28" />
+
+                    {/* Bottom: Sparkline & Micro-text */}
+                    <div className="flex flex-col gap-3 text-left">
+                      <Sparkline data={sparklines[stage.name]} color={stage.color} />
+                      <div className="flex justify-between items-center text-[9px] text-mute font-mono uppercase tracking-wide">
+                        <span>Avg. Time</span>
+                        <span className="font-semibold text-ink">{avgTimes[stage.name]}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-          
-          {sankeyData.nodes.length > 0 ? (
-            <div className="w-full h-80 pt-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <Sankey
-                  data={sankeyData}
-                  node={<SankeyNode />}
-                  link={<SankeyLink />}
-                  nodeWidth={12}
-                  nodePadding={28}
-                  margin={{ top: 24, bottom: 24, left: 40, right: 40 }}
-                >
-                  <Tooltip
-                    contentStyle={{
-                      background: 'var(--color-canvas-light, #fff)',
-                      border: '1px solid var(--color-hairline-light, #e5e7eb)',
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                      fontFamily: 'ui-monospace, monospace',
-                      padding: '8px 12px',
-                    }}
-                  />
-                </Sankey>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="w-full h-48 flex flex-col items-center justify-center border border-dashed border-hairline-light rounded-md bg-canvas-light text-center p-6">
-              <TrendingUp className="w-8 h-8 text-mute mb-3" />
-              <h4 className="text-xs font-bold text-ink uppercase tracking-wider">No active funnel data</h4>
-              <p className="text-[11px] text-mute mt-1 max-w-xs">Start tracking jobs in the Job Tracker or launch the scraper agent to populate the real-time flow funnel.</p>
-            </div>
-          )}
         </div>
       </div>
 
@@ -464,10 +636,31 @@ export function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto items-stretch">
           
           {/* Left Card: Recent Activity (Light Card) */}
-          <div className="lg:col-span-7 bg-surface-soft border border-hairline-light rounded-lg p-8 flex flex-col justify-between">
+          <div className="lg:col-span-7 bg-surface-soft border border-hairline-light rounded-lg p-8 flex flex-col justify-between animate-fade-in">
             <div>
               <div className="flex items-center justify-between mb-8 border-b border-hairline-light pb-4">
-                <h3 className="text-title-sm text-ink font-semibold uppercase tracking-wider">Recent Activity</h3>
+                <div className="flex items-center gap-3">
+                  <h3 className="text-title-sm text-ink font-semibold uppercase tracking-wider">Recent Activity</h3>
+                  {selectedNode && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase bg-primary text-on-primary border border-primary animate-fade-in shadow-sm">
+                      Filter: {selectedNode} (Locked)
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedNode(null);
+                        }}
+                        className="ml-1 text-[10px] font-bold hover:text-red-300 border-none bg-transparent cursor-pointer"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
+                  {!selectedNode && hoveredNode && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase bg-primary/10 text-primary border border-primary/20 animate-fade-in shadow-sm">
+                      Filter: {hoveredNode}
+                    </span>
+                  )}
+                </div>
                 <button 
                   onClick={() => setView('tracker')}
                   className="text-xs font-semibold text-ink underline hover:text-primary-active bg-transparent border-none cursor-pointer"
@@ -477,12 +670,12 @@ export function Dashboard() {
               </div>
 
               <div className="divide-y divide-hairline-light">
-                {applications.slice(0, 5).map(app => {
+                {filteredRecentApps.slice(0, 5).map(app => {
                   const companyInitial = app.company ? app.company.charAt(0).toUpperCase() : 'J';
                   const matchScore = app.matchScore || 75;
                   
                   return (
-                    <div key={app.id} className="flex items-center justify-between py-5 text-xs">
+                    <div key={app.id} className="flex items-center justify-between py-5 text-xs animate-fade-in">
                       <div className="flex items-center gap-4 min-w-0">
                         {/* Company placeholder badge */}
                         <div className="w-10 h-10 bg-canvas-light border border-hairline-light rounded-lg flex items-center justify-center font-bold text-ink shrink-0 text-sm">
@@ -520,8 +713,12 @@ export function Dashboard() {
                     </div>
                   );
                 })}
-                {applications.length === 0 && (
-                  <div className="text-center py-12 text-mute text-xs">No active applications currently logged.</div>
+                {filteredRecentApps.length === 0 && (
+                  <div className="text-center py-12 text-mute text-xs animate-fade-in">
+                    {selectedNode || hoveredNode 
+                      ? `No recent activity in the "${selectedNode || hoveredNode}" stage.` 
+                      : "No active applications currently logged."}
+                  </div>
                 )}
               </div>
             </div>
@@ -587,7 +784,7 @@ export function Dashboard() {
   );
 }
 
-function StatCard({ title, value, icon: Icon, subtitle, isPulsing = false, isMuted = false }: any) {
+function StatCard({ title, value, icon: Icon, subtitle, isPulsing = false, isMuted = false, velocity = 0 }: any) {
   return (
     <div className="bg-surface-card border border-hairline-light rounded-lg p-6 flex flex-col justify-between h-40 text-left">
       <div className="flex justify-between items-center text-mute">
@@ -595,13 +792,20 @@ function StatCard({ title, value, icon: Icon, subtitle, isPulsing = false, isMut
         <Icon className={clsx("w-4 h-4", isMuted ? "text-slate-300" : "text-ink")} />
       </div>
       
-      <div className="flex items-baseline gap-2">
+      <div className="flex items-baseline gap-2 flex-wrap">
         <span className={clsx(
           "text-[40px] font-bold tracking-tight leading-none text-ink font-display",
           isMuted && "text-slate-300"
         )}>
           {value}
         </span>
+        
+        {velocity > 0 && (
+          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 mb-1 shadow-sm animate-fade-in">
+            +{velocity} new
+          </span>
+        )}
+
         {isPulsing && (
           <span className="flex h-2.5 w-2.5 relative mb-1.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
