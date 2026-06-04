@@ -13,8 +13,11 @@ async function handleSendToApp(data) {
   // Query all tabs to find an open AutoJob-Agent page
   const tabs = await chrome.tabs.query({});
   const appTab = tabs.find(t => t.url && (
-    t.url.startsWith('http://localhost:3000') || 
-    t.url.startsWith('http://localhost:5173')
+    t.url.startsWith('http://localhost') || 
+    t.url.startsWith('https://localhost') ||
+    t.url.startsWith('http://127.0.0.1') || 
+    t.url.startsWith('https://127.0.0.1') ||
+    (t.title && t.title.includes('TalentFlow') && !t.url.includes('chrome-extension://'))
   ));
   
   if (appTab) {

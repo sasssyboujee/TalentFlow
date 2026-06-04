@@ -90,6 +90,16 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [autoSelectProjects, setAutoSelectProjects] = useState(!!settings.autoSelectProjects);
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const processedPrefillRef = useRef<string | null>(null);
+  const runningRef = useRef(false);
+
+  const setRunning = (val: boolean) => {
+    runningRef.current = val;
+    setIsRunning(val);
+    if (!val) {
+      processedPrefillRef.current = null;
+    }
+  };
 
   // Initialize Search Preferences based on Profile
   useEffect(() => {
@@ -151,13 +161,22 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
     if (e) e.preventDefault();
     const targetUrl = overrideUrl !== undefined ? overrideUrl : url;
     const targetJdText = overrideJdText !== undefined ? overrideJdText : jdText;
-    const targetInputMode = overrideUrl !== undefined ? 'url' : (overrideJdText !== undefined ? 'text' : inputMode);
+    
+    let targetInputMode = inputMode;
+    if (overrideUrl !== undefined && overrideJdText !== undefined) {
+      targetInputMode = 'text';
+    } else if (overrideUrl !== undefined) {
+      targetInputMode = 'url';
+    } else if (overrideJdText !== undefined) {
+      targetInputMode = 'text';
+    }
 
     if (targetInputMode === 'url' && !targetUrl) return;
     if (targetInputMode === 'text' && !targetJdText) return;
     if (targetInputMode === 'discover' && (!targetTitle || !location)) return;
 
-    setIsRunning(true);
+    if (runningRef.current) return;
+    setRunning(true);
     setLogs([]);
     setCurrentStep(0);
     setDiscoveredJobs([]);
@@ -214,12 +233,12 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
 
         internalPushLog(`Scraping complete! Please select opportunities to import.`, 'success');
         playSuccessChime();
-        setIsRunning(false);
+        setRunning(false);
       } catch (err: any) {
         console.error(err);
         pushLog(`Discovery Agent Error: ${err.message}`, 'error');
         playErrorBuzzer();
-        setIsRunning(false);
+        setRunning(false);
       }
       return;
     }
@@ -230,7 +249,7 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
       if (isDuplicateUrl) {
         internalPushLog(`Duplicate check: The URL "${targetUrl}" is already in your Job Tracker.`, 'error');
         playErrorBuzzer();
-        setIsRunning(false);
+        setRunning(false);
         return;
       }
     }
@@ -307,7 +326,7 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
         id: `app-${Date.now()}`,
         company: analysis.company || 'Unknown',
         role: analysis.role || 'Unknown Role',
-        url: targetInputMode === 'url' ? targetUrl : 'Manual Input',
+        url: targetUrl || 'Manual Input',
         status: 'ready' as const,
         dateAdded: new Date().toISOString(),
         matchScore: analysis.matchScore,
@@ -326,7 +345,7 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
       playSuccessChime();
       
       setTimeout(() => {
-        setIsRunning(false);
+        setRunning(false);
         setUrl('');
         setJdText('');
         if (onClose) {
@@ -340,7 +359,7 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
       console.error(err);
       pushLog(`Pipeline Error: ${err.message}`, 'error');
       playErrorBuzzer();
-      setIsRunning(false);
+      setRunning(false);
     }
   };
 
@@ -353,7 +372,7 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
         id: `app-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 5)}`,
         company: job.company || 'Unknown',
         role: job.role || 'Unknown Role',
-        url: `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(`${job.role} ${job.company}`)}`,
+        url: `https://www.google.com/search?q=${encodeURIComponent(`${job.role} ${job.company} jobs`)}`,
         description: job.description,
         status: 'ready' as const,
         dateAdded: new Date().toISOString(),
@@ -390,7 +409,17 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
     if (prefilledJob) {
       const { url: pUrl, jdText: pJd, autoRun } = prefilledJob;
       
-      if (pUrl) {
+      const jobKey = `${pUrl || ''}-${pJd?.substring(0, 100) || ''}`;
+      if (processedPrefillRef.current === jobKey) {
+        return;
+      }
+      processedPrefillRef.current = jobKey;
+      
+      if (pUrl && pJd) {
+        setInputMode('text');
+        setUrl(pUrl);
+        setJdText(pJd);
+      } else if (pUrl) {
         setInputMode('url');
         setUrl(pUrl);
       } else if (pJd) {
@@ -515,17 +544,30 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
               )}
 
               {inputMode === 'text' && (
-                <div className="mb-8">
-                  <label className="block text-xs font-semibold text-mute uppercase tracking-wider mb-3">Raw Job Description</label>
-                  <textarea
-                    required
-                    rows={8}
-                    placeholder="Paste the full text of the job description here..."
-                    value={jdText}
-                    onChange={e => setJdText(e.target.value)}
-                    disabled={isRunning}
-                    className="w-full px-4 py-2.5 bg-canvas-light border border-hairline-light rounded-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all disabled:opacity-50 resize-none text-ink placeholder:text-stone text-sm"
-                  />
+                <div className="mb-8 space-y-6">
+                  <div>
+                    <label className="block text-xs font-semibold text-mute uppercase tracking-wider mb-3">Job URL (Optional)</label>
+                    <input
+                      type="url"
+                      placeholder="https://company.com/jobs/..."
+                      value={url}
+                      onChange={e => setUrl(e.target.value)}
+                      disabled={isRunning}
+                      className="w-full px-4 py-2.5 bg-canvas-light border border-hairline-light rounded-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all disabled:opacity-50 text-ink placeholder:text-stone h-10 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-mute uppercase tracking-wider mb-3">Raw Job Description</label>
+                    <textarea
+                      required
+                      rows={8}
+                      placeholder="Paste the full text of the job description here..."
+                      value={jdText}
+                      onChange={e => setJdText(e.target.value)}
+                      disabled={isRunning}
+                      className="w-full px-4 py-2.5 bg-canvas-light border border-hairline-light rounded-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all disabled:opacity-50 resize-none text-ink placeholder:text-stone text-sm"
+                    />
+                  </div>
                 </div>
               )}
 

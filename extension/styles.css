@@ -260,6 +260,24 @@ body {
   border-color: var(--color-primary-hover);
 }
 
+.btn-secondary {
+  color: var(--color-text-main);
+  background-color: #ffffff;
+  border: 1px solid var(--color-card-border);
+}
+
+.btn-secondary:disabled {
+  background-color: #ffffff;
+  border-color: var(--color-primary-disabled);
+  color: var(--color-text-mute-soft);
+  opacity: 0.6;
+}
+
+.btn-secondary:not(:disabled):hover {
+  background-color: var(--color-card-bg);
+  border-color: var(--color-text-mute);
+}
+
 /* Footer */
 .footer {
   margin-top: 18px;

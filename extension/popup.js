@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const jobTitleEl = document.getElementById('job-title');
   const statusBadge = document.getElementById('status-badge');
   const sendBtn = document.getElementById('send-btn');
+  const copyBtn = document.getElementById('copy-btn');
   const autoRunCheckbox = document.getElementById('auto-run-checkbox');
 
   let activeTabUrl = '';
@@ -50,12 +51,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     
     scrapedText = scriptResult?.[0]?.result || '';
+    if (scrapedText) {
+      copyBtn.disabled = false;
+    }
 
     // 3. Detect if local AutoJob tab is open
     const allTabs = await chrome.tabs.query({});
     isAppOpen = allTabs.some(t => t.url && (
-      t.url.startsWith('http://localhost:3000') || 
-      t.url.startsWith('http://localhost:5173')
+      t.url.startsWith('http://localhost') || 
+      t.url.startsWith('https://localhost') ||
+      t.url.startsWith('http://127.0.0.1') || 
+      t.url.startsWith('https://127.0.0.1') ||
+      (t.title && t.title.includes('TalentFlow') && !t.url.includes('chrome-extension://'))
     ));
 
     if (isAppOpen) {
@@ -109,5 +116,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         sendBtn.disabled = false;
       }
     });
+  });
+
+  // Copy button click handler
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(scrapedText);
+      const originalText = copyBtn.querySelector('.btn-text').textContent;
+      copyBtn.querySelector('.btn-text').textContent = 'Copied!';
+      setTimeout(() => {
+        copyBtn.querySelector('.btn-text').textContent = originalText;
+      }, 1500);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
   });
 });

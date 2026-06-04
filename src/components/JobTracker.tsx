@@ -16,9 +16,10 @@ const getClickableUrl = (url: string, role: string, company: string) => {
     url.includes('placeholder') ||
     url.includes('example.com') ||
     url.includes('Manual Input') ||
-    (url.includes('linkedin.com/jobs/view/') && (url.includes('123456') || url.includes('...') || url.length < 55))
+    url.includes('linkedin.com/jobs/search') ||
+    (url.includes('linkedin.com/jobs/view/') && (url.includes('123456') || url.includes('...') || url.endsWith('/view') || url.endsWith('/view/')))
   ) {
-    return `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(`${role} ${company}`)}`;
+    return `https://www.google.com/search?q=${encodeURIComponent(`${role} ${company} jobs`)}`;
   }
   return url;
 };
