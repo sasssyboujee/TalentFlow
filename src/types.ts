@@ -39,6 +39,7 @@ export interface JobApplication {
   company: string;
   role: string;
   url: string;
+  description?: string;
   status: ApplicationStatus;
   dateAdded: string;
   matchScore?: number;

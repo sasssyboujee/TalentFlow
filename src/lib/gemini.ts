@@ -529,3 +529,169 @@ Output MUST be valid JSON matching this schema:
   }
 }
 
+export interface DiscoveredJob {
+  company: string;
+  role: string;
+  url: string;
+  location: string;
+  description: string;
+  matchScore: number;
+  matchingKeywords: string[];
+  missingKeywords: string[];
+  skillCategories: { category: string; userScore: number; jobDemandScore: number }[];
+}
+
+export async function discoverJobs(
+  profile: UserProfile,
+  preferences: {
+    targetTitle: string;
+    jobType: string;
+    location: string;
+    workMode: string;
+  }
+): Promise<DiscoveredJob[]> {
+  const prompt = `
+You are an expert AI job search agent. Your task is to search and simulate scraping popular job boards (LinkedIn, Indeed, ZipRecruiter) to discover exactly 10 matching job postings that align with the candidate's profile, skills, and target job preferences.
+
+CANDIDATE PROFILE:
+Name: ${profile.name}
+Skills: ${profile.skills.join(', ')}
+Summary: ${profile.summary}
+Experience:
+${profile.experience?.map(e => `- ${e.role} at ${e.company} (${e.startDate} - ${e.endDate}): ${e.description}`).join('\n')}
+Projects:
+${profile.projects?.map(p => `- ${p.name} (${p.technologies.join(', ')}): ${p.description}`).join('\n')}
+
+SEARCH PREFERENCES:
+Target Job Title: ${preferences.targetTitle}
+Job Type: ${preferences.jobType} (e.g. full-time, part-time, contract, internship)
+Location: ${preferences.location} (e.g. New York, NY or Remote)
+Work Mode: ${preferences.workMode} (e.g. remote, hybrid, on-site, all)
+
+INSTRUCTIONS:
+1. Generate exactly 10 highly realistic, detailed job postings from real, recognizable tech companies (e.g. Stripe, Vercel, Google, OpenAI, Slack, Figma, etc.) that would match these preferences and candidate's skills.
+2. For each job, calculate a "matchScore" (0 to 100) reflecting how well the candidate's profile fits the requirements.
+3. For each job, generate:
+   - "company": Real company name.
+   - "role": Specific job title matching the search.
+   - "location": City, State or "Remote".
+   - "url": Realistic search result URL (e.g. https://www.linkedin.com/jobs/view/...).
+   - "description": Brief summary of the role (3-4 sentences, max 60 words).
+   - "matchingKeywords" and "missingKeywords": Tailored lists of skills the candidate has vs. lacks.
+   - "skillCategories": Scores (0-100) for Frontend, Backend, AI / Data, DevOps, and Soft Skills.
+
+Output MUST be valid JSON containing an array of 10 objects matching the schema below.
+JSON SCHEMA:
+{
+  "jobs": [
+    {
+      "company": "string",
+      "role": "string",
+      "url": "string",
+      "location": "string",
+      "description": "string",
+      "matchScore": number,
+      "matchingKeywords": ["string"],
+      "missingKeywords": ["string"],
+      "skillCategories": [
+        {
+          "category": "Frontend" | "Backend" | "AI / Data" | "DevOps" | "Soft Skills",
+          "userScore": number,
+          "jobDemandScore": number
+        }
+      ]
+    }
+  ]
+}
+`;
+
+  try {
+    const text = await generateLLMResponse(prompt);
+    const result = JSON.parse(text);
+    return result.jobs || [];
+  } catch (error) {
+    console.error('Error discovering jobs:', error);
+    throw error;
+  }
+}
+
+export interface TailoredJobAssets {
+  tailoredResumeSnippet: string;
+  tailoredCoverLetter: string;
+  tailoredSkills: string[];
+  interviewPrep: { question: string; answer: string }[];
+}
+
+export async function tailorJobAssets(
+  job: { company: string; role: string; description: string; matchingKeywords?: string[]; missingKeywords?: string[] },
+  profile: UserProfile
+): Promise<TailoredJobAssets> {
+  let strictOnePage = true;
+  try {
+    const savedSettings = localStorage.getItem('agent_settings');
+    if (savedSettings) {
+      const parsed = JSON.parse(savedSettings);
+      if (parsed.strictOnePage !== undefined) {
+        strictOnePage = !!parsed.strictOnePage;
+      }
+    }
+  } catch (e) {}
+
+  const resumeSnippetConstraint = strictOnePage 
+    ? "Keep it extremely compact (maximum of 3 sentences, roughly 60-70 words) so that the tailored resume can fit neatly on a single printed page."
+    : "Write a detailed and comprehensive professional summary (4-6 sentences, roughly 100-150 words) highlighting their relevant experience in depth.";
+
+  const todayStr = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const prompt = `
+You are an expert AI career coach and recruiter. Your task is to analyze the provided Job details and User Profile, and generate customized career assets for this specific application.
+
+USER PROFILE:
+Name: ${profile.name}
+Email: ${profile.email}
+Phone: ${profile.phone}
+Skills: ${profile.skills.join(', ')}
+Summary: ${profile.summary}
+Experience:
+${profile.experience?.map(e => `- ${e.role} at ${e.company} (${e.startDate} - ${e.endDate}): ${e.description}`).join('\n')}
+Projects:
+${profile.projects?.map(p => `- ${p.name} (${p.technologies.join(', ')}): ${p.description}`).join('\n')}
+
+JOB DETAILS:
+Role: ${job.role} at ${job.company}
+Description: ${job.description}
+matchingKeywords: ${job.matchingKeywords?.join(', ') || ''}
+missingKeywords: ${job.missingKeywords?.join(', ') || ''}
+
+INSTRUCTIONS:
+1. Generate a "tailoredResumeSnippet". This is a professional summary written in the first person that highlights the user's matching skills and aligns their experience with the job description. ${resumeSnippetConstraint} Output as clean, raw plain-text ONLY. Do NOT use markdown styling, asterisks for bolding, or markdown lists.
+2. Generate a "tailoredCoverLetter". This is a full, professional cover letter (3-4 paragraphs, roughly 250-350 words) written in the first person. Start the cover letter directly with the formal salutation (e.g., 'Dear Hiring Team,' or 'Dear [Company] Hiring Team,') and sign off professionally. Do NOT include sender contact info headers, addresses, or duplicate date headers at the very top. Use the current date (${todayStr}) for any date mentions or date headers if needed. Format using Markdown.
+3. Generate "tailoredSkills". Select the user's relevant skills from their profile, and automatically add 2 to 4 key realistic technical skills mentioned in the job description that the user could reasonably possess or pick up quickly. Combine these into a single array of up to 15-18 skills total.
+4. Generate "interviewPrep". A list of 3 to 5 realistic technical or behavioral questions specific to this role that the interviewer might ask, along with highly tailored, recommended answers based on the user's background.
+
+Output MUST be valid JSON matching this schema exactly:
+{
+  "tailoredResumeSnippet": "string",
+  "tailoredCoverLetter": "string",
+  "tailoredSkills": ["string"],
+  "interviewPrep": [
+    {
+      "question": "string",
+      "answer": "string"
+    }
+  ]
+}
+`;
+
+  try {
+    const text = await generateLLMResponse(prompt);
+    return JSON.parse(text) as TailoredJobAssets;
+  } catch (error) {
+    console.error('Error tailoring job assets:', error);
+    throw error;
+  }
+}

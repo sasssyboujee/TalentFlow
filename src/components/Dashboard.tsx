@@ -1,8 +1,113 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAppState } from '../state';
 import { Target, CheckCircle2, RotateCw, Briefcase, TrendingUp } from 'lucide-react';
 import clsx from 'clsx';
 import type { ApplicationStatus } from '../types';
+import { Sankey, Tooltip, ResponsiveContainer } from 'recharts';
+interface SankeyNodeProps {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  value?: number;
+  payload?: {
+    name: string;
+    displayValue?: number;
+  };
+}
+
+const NODE_COLORS: Record<string, string> = {
+  'Scraped': '#6b7280',     // gray-500
+  'Tailoring': '#6b7280',   // gray-500
+  'Ready': '#fb923c',       // orange — matches ready pill
+  'Applied': '#3b82f6',     // blue — matches accent-light-blue
+  'Interview': 'var(--color-primary)',   // primary — matches interview pill, dynamically shifts color
+  'Offer': '#10b981',       // teal — matches accent-teal / offer pill
+  'Rejected': '#ef4444',    // red — matches accent-danger
+};
+
+const SankeyNode = ({ x = 0, y = 0, width = 0, height = 0, value = 0, payload }: SankeyNodeProps) => {
+  if (!payload) return null;
+  const name = payload.name;
+  const fill = NODE_COLORS[name] || '#9ca3af';
+  const isRightSide = name === 'Applied' || name === 'Interview' || name === 'Offer' || name === 'Rejected';
+  const displayVal = payload.displayValue !== undefined ? payload.displayValue : value;
+
+  return (
+    <g>
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        fill={fill}
+        fillOpacity={0.85}
+        rx={4}
+      />
+      <text
+        x={isRightSide ? x - 10 : x + width + 10}
+        y={y + height / 2 + 4}
+        textAnchor={isRightSide ? 'end' : 'start'}
+        fontSize="11px"
+        fontWeight="700"
+        fill="currentColor"
+        className="text-ink"
+        style={{ fontFamily: 'ui-monospace, monospace', letterSpacing: '0.05em', textTransform: 'uppercase' as const }}
+      >
+        {name} · {displayVal}
+      </text>
+    </g>
+  );
+};
+
+interface SankeyLinkProps {
+  sourceX?: number;
+  targetX?: number;
+  sourceY?: number;
+  targetY?: number;
+  sourceControlX?: number;
+  targetControlX?: number;
+  width?: number;
+  linkWidth?: number;
+  source?: { name: string };
+  target?: { name: string };
+}
+
+const SankeyLink = (props: SankeyLinkProps) => {
+  const { sourceX, targetX, sourceY, targetY, sourceControlX, targetControlX, width, linkWidth, source, target } = props;
+  
+  if (!source || !target) return null;
+  if (sourceX === undefined || targetX === undefined || sourceY === undefined || targetY === undefined || sourceControlX === undefined || targetControlX === undefined) return null;
+  
+  const sourceName = source.name;
+  const targetName = target.name;
+  
+  const gradientId = `sankey-grad-${sourceName}-${targetName}`.replace(/\s+/g, '-');
+  const sourceColor = NODE_COLORS[sourceName] || '#9ca3af';
+  const targetColor = NODE_COLORS[targetName] || '#9ca3af';
+  
+  const strokeWidth = width !== undefined ? width : (linkWidth !== undefined ? linkWidth : 0);
+  const pathD = `M${sourceX},${sourceY}C${sourceControlX},${sourceY} ${targetControlX},${targetY} ${targetX},${targetY}`;
+  
+  return (
+    <g>
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor={sourceColor} stopOpacity={0.25} />
+          <stop offset="100%" stopColor={targetColor} stopOpacity={0.25} />
+        </linearGradient>
+      </defs>
+      <path
+        d={pathD}
+        stroke={`url(#${gradientId})`}
+        strokeWidth={Math.max(2, strokeWidth)}
+        fill="none"
+        className="hover:stroke-opacity-50 transition-all duration-200"
+        style={{ transition: 'stroke-opacity 0.2s' }}
+      />
+    </g>
+  );
+};
 
 export function Dashboard() {
   const { applications, setView, emailSuggestions } = useAppState();
@@ -16,6 +121,83 @@ export function Dashboard() {
     const active = applications.filter(a => a.status === 'scraping' || a.status === 'tailoring' || a.status === 'ready').length;
     
     return { total, applied, interviewing, active };
+  }, [applications]);
+
+
+
+  const sankeyData = useMemo(() => {
+    const getDisplayValue = (name: string) => {
+      switch (name) {
+        case 'Scraped':
+          return applications.length;
+        case 'Ready':
+          return applications.filter(a => a.status !== 'scraping' && a.status !== 'tailoring').length;
+        case 'Applied':
+          return applications.filter(a => a.status === 'applied' || a.status === 'interview' || a.status === 'offer' || a.status === 'rejected').length;
+        case 'Interview':
+          return applications.filter(a => a.status === 'interview' || a.status === 'offer' || (a.status === 'rejected' && (a.interviewPrep?.length || a.interviewDate))).length;
+        case 'Offer':
+          return applications.filter(a => a.status === 'offer').length;
+        case 'Rejected':
+          return applications.filter(a => a.status === 'rejected').length;
+        default:
+          return 0;
+      }
+    };
+
+    const nodes = [
+      { name: 'Scraped', displayValue: getDisplayValue('Scraped') },
+      { name: 'Ready', displayValue: getDisplayValue('Ready') },
+      { name: 'Applied', displayValue: getDisplayValue('Applied') },
+      { name: 'Interview', displayValue: getDisplayValue('Interview') },
+      { name: 'Offer', displayValue: getDisplayValue('Offer') },
+      { name: 'Rejected', displayValue: getDisplayValue('Rejected') }
+    ];
+
+    const ready = applications.filter(a => a.status === 'ready').length;
+    const applied = applications.filter(a => a.status === 'applied').length;
+    const interview = applications.filter(a => a.status === 'interview').length;
+    const offer = applications.filter(a => a.status === 'offer').length;
+    const rejected = applications.filter(a => a.status === 'rejected').length;
+
+    const rejectedAfterInterview = applications.filter(a => a.status === 'rejected' && (a.interviewPrep?.length || a.interviewDate)).length;
+    const rejectedDirect = rejected - rejectedAfterInterview;
+
+    const flowReadyToApplied = applied + interview + offer + rejected;
+    const flowAppliedToInterview = interview + offer + rejectedAfterInterview;
+    const flowAppliedToRejected = rejectedDirect;
+    const flowInterviewToOffer = offer;
+    const flowInterviewToRejected = rejectedAfterInterview;
+
+    const links = [
+      { source: 0, target: 1, value: flowReadyToApplied + ready },
+      { source: 1, target: 2, value: flowReadyToApplied },
+      { source: 2, target: 3, value: flowAppliedToInterview },
+      { source: 2, target: 5, value: flowAppliedToRejected },
+      { source: 3, target: 4, value: flowInterviewToOffer },
+      { source: 3, target: 5, value: flowInterviewToRejected }
+    ].filter(link => link.value > 0);
+
+    const activeNodeIndices = new Set<number>();
+    links.forEach(l => {
+      activeNodeIndices.add(l.source);
+      activeNodeIndices.add(l.target);
+    });
+
+    const activeNodes = nodes
+      .map((n, idx) => ({ ...n, originalIndex: idx }))
+      .filter((n, idx) => activeNodeIndices.has(idx));
+
+    const finalLinks = links.map(l => {
+      const source = activeNodes.findIndex(n => n.originalIndex === l.source);
+      const target = activeNodes.findIndex(n => n.originalIndex === l.target);
+      return { source, target, value: l.value };
+    });
+
+    return {
+      nodes: activeNodes.map(({ name, displayValue }) => ({ name, displayValue })),
+      links: finalLinks
+    };
   }, [applications]);
 
   const getStatusPillColor = (status: ApplicationStatus) => {
@@ -89,6 +271,50 @@ export function Dashboard() {
           <StatCard title="Auto-Applied" value={stats.applied} icon={CheckCircle2} subtitle="Scraped & tailored" />
           <StatCard title="Processing" value={stats.active} icon={RotateCw} subtitle="Live scraper tasks" isPulsing={stats.active > 0} />
           <StatCard title="Interviews" value={stats.interviewing} icon={Target} subtitle="Meetings scheduled" isMuted={stats.interviewing === 0} />
+        </div>
+      </div>
+
+      {/* Funnel Flow Chart */}
+      <div className="w-full px-12 mb-12">
+        <div className="max-w-7xl mx-auto bg-surface-soft border border-hairline-light rounded-lg p-8">
+          <div className="flex items-center justify-between mb-8 border-b border-hairline-light pb-4">
+            <div>
+              <h3 className="text-title-sm text-ink font-semibold uppercase tracking-wider">Application Funnel</h3>
+              <p className="text-[10px] text-mute mt-1 font-mono uppercase tracking-wide">Live Pipeline Flow Analysis</p>
+            </div>
+          </div>
+          
+          {sankeyData.nodes.length > 0 ? (
+            <div className="w-full h-80 pt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <Sankey
+                  data={sankeyData}
+                  node={<SankeyNode />}
+                  link={<SankeyLink />}
+                  nodeWidth={12}
+                  nodePadding={28}
+                  margin={{ top: 24, bottom: 24, left: 40, right: 40 }}
+                >
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--color-canvas-light, #fff)',
+                      border: '1px solid var(--color-hairline-light, #e5e7eb)',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      fontFamily: 'ui-monospace, monospace',
+                      padding: '8px 12px',
+                    }}
+                  />
+                </Sankey>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="w-full h-48 flex flex-col items-center justify-center border border-dashed border-hairline-light rounded-md bg-canvas-light text-center p-6">
+              <TrendingUp className="w-8 h-8 text-mute mb-3" />
+              <h4 className="text-xs font-bold text-ink uppercase tracking-wider">No active funnel data</h4>
+              <p className="text-[11px] text-mute mt-1 max-w-xs">Start tracking jobs in the Job Tracker or launch the scraper agent to populate the real-time flow funnel.</p>
+            </div>
+          )}
         </div>
       </div>
 

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAppState } from '../state';
-import { ExternalLink, MoreVertical, ChevronDown, ChevronUp, FileDown, Loader2, X, Target, Sparkles, HelpCircle, Briefcase, Award, Bot, ArrowLeft, Send, Play, Terminal as TerminalIcon, Maximize2, Search, Mic } from 'lucide-react';
+import { ExternalLink, MoreVertical, ChevronDown, ChevronUp, FileDown, Loader2, X, Target, Sparkles, HelpCircle, Briefcase, Award, Bot, ArrowLeft, Send, Play, Terminal as TerminalIcon, Maximize2, Search, Mic, AlertTriangle, AlertCircle } from 'lucide-react';
 import type { JobApplication, ApplicationStatus, UserProfile, InterviewQuestion } from '../types';
 import { createPortal } from 'react-dom';
 import { ResumeTemplate } from './ResumeTemplate';
 import { CoverLetterTemplate } from './CoverLetterTemplate';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
-import { gradeInterviewAnswer } from '../lib/gemini';
+import { gradeInterviewAnswer, tailorJobAssets } from '../lib/gemini';
 import { AgentRunner } from './AgentRunner';
 import clsx from 'clsx';
 
@@ -287,6 +287,60 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
   const [editedResumeSnippet, setEditedResumeSnippet] = useState(app.tailoredResumeSnippet || '');
   const [isResumeDirty, setIsResumeDirty] = useState(false);
 
+  // Lazy asset tailoring states
+  const [isTailoring, setIsTailoring] = useState(false);
+  const [tailoringError, setTailoringError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    
+    const runTailoring = async () => {
+      if (!app.tailoredResumeSnippet || !app.tailoredCoverLetter || !app.interviewPrep) {
+        setIsTailoring(true);
+        setTailoringError('');
+        try {
+          const assets = await tailorJobAssets(
+            { 
+              company: app.company, 
+              role: app.role, 
+              description: app.description || (app.extractedKeywords ? `Require skills in: ${app.extractedKeywords.join(', ')}` : 'Job posting'),
+              matchingKeywords: app.extractedKeywords || [],
+              missingKeywords: []
+            }, 
+            profile
+          );
+          
+          if (active) {
+            updateApplicationDetails(app.id, {
+              tailoredResumeSnippet: assets.tailoredResumeSnippet,
+              tailoredCoverLetter: assets.tailoredCoverLetter,
+              tailoredSkills: assets.tailoredSkills,
+              interviewPrep: assets.interviewPrep
+            });
+            setEditedResumeSnippet(assets.tailoredResumeSnippet);
+          }
+        } catch (err: any) {
+          console.error(err);
+          if (active) {
+            setTailoringError(err.message || 'Failed to tailor assets with AI.');
+          }
+        } finally {
+          if (active) {
+            setIsTailoring(false);
+          }
+        }
+      } else {
+        setIsTailoring(false);
+      }
+    };
+    
+    runTailoring();
+    
+    return () => {
+      active = false;
+    };
+  }, [app.id, app.tailoredResumeSnippet, app.tailoredCoverLetter, app.interviewPrep, profile, updateApplicationDetails]);
+
   useEffect(() => {
     setEditedResumeSnippet(app.tailoredResumeSnippet || '');
     setIsResumeDirty(false);
@@ -509,7 +563,38 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
         </header>
 
         {/* Content Body */}
-        <div className="flex-1 flex overflow-hidden min-h-0 bg-surface-soft">
+        {isTailoring ? (
+          <div className="flex-1 flex flex-col items-center justify-center bg-surface-dark text-on-dark p-12">
+            <div className="w-full max-w-lg space-y-6 text-left font-mono">
+              <div className="flex items-center gap-3 border-b border-surface-dark-elevated pb-4">
+                <Loader2 className="w-5 h-5 animate-spin text-accent-teal" />
+                <span className="text-sm font-bold uppercase tracking-widest text-on-dark-soft">AI Align Agent - Tailoring Console</span>
+              </div>
+              <div className="space-y-3 text-xs leading-relaxed text-on-dark-soft">
+                <p className="text-slate-500">[{new Date().toLocaleTimeString()}] Initializing document alignment engine...</p>
+                <p className="text-slate-500">[{new Date().toLocaleTimeString()}] Fetching job details: {app.role} at {app.company}...</p>
+                <p className="text-accent-teal">[{new Date().toLocaleTimeString()}] Invoking Gemini 3.5 Flash semantic matching...</p>
+                <p className="text-accent-warning animate-pulse">[{new Date().toLocaleTimeString()}] Customizing summary resume snippet & cover letter...</p>
+                <p className="text-slate-600">[{new Date().toLocaleTimeString()}] Compiling behavioral prep simulator questions...</p>
+              </div>
+            </div>
+          </div>
+        ) : tailoringError ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-12 bg-canvas">
+            <AlertTriangle className="w-12 h-12 text-rose-500 mb-4" />
+            <h4 className="text-heading-sm font-bold text-ink uppercase tracking-wide">Alignment Failed</h4>
+            <p className="text-sm text-mute mt-2 max-w-md text-center">{tailoringError}</p>
+            <button 
+              onClick={() => {
+                setTailoringError('');
+              }}
+              className="mt-6 px-6 py-2.5 bg-primary text-on-primary rounded-md font-semibold text-xs uppercase"
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <div className="flex-1 flex overflow-hidden min-h-0 bg-surface-soft">
           {/* Left Column: Analytics (35%) */}
           <section className="w-[35%] border-r border-hairline-light p-10 overflow-y-auto flex flex-col space-y-8 shrink-0 bg-canvas-light">
             {/* Score Metric */}
@@ -962,6 +1047,7 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
             </div>
           </section>
         </div>
+        )}
       </div>
 
       {printingType === 'resume' && createPortal(
