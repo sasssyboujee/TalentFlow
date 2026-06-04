@@ -111,6 +111,7 @@ const SankeyLink = (props: SankeyLinkProps) => {
 
 export function Dashboard() {
   const { applications, setView, emailSuggestions } = useAppState();
+  const [hoveredDay, setHoveredDay] = useState<{ dateStr: string; date: Date; count: number } | null>(null);
 
   const pendingSuggestions = emailSuggestions.filter(s => s.status === 'pending');
 
@@ -199,6 +200,73 @@ export function Dashboard() {
       links: finalLinks
     };
   }, [applications]);
+
+  const heatmapData = useMemo(() => {
+    const today = new Date();
+    const counts: Record<string, number> = {};
+    
+    applications.forEach(app => {
+      const isAppliedStatus = ['applied', 'interview', 'offer', 'rejected'].includes(app.status);
+      const targetDate = app.dateApplied || app.dateAdded;
+      if (isAppliedStatus && targetDate) {
+        const dStr = new Date(targetDate).toISOString().split('T')[0];
+        counts[dStr] = (counts[dStr] || 0) + 1;
+      }
+    });
+
+    // Start from 52 weeks ago, aligned to Sunday
+    const start = new Date(today);
+    start.setDate(today.getDate() - 364);
+    const dayOfWeek = start.getDay();
+    start.setDate(start.getDate() - dayOfWeek);
+
+    const totalDays = 53 * 7;
+    const days = [];
+    for (let i = 0; i < totalDays; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dStr = d.toISOString().split('T')[0];
+      const count = counts[dStr] || 0;
+      days.push({ dateStr: dStr, date: d, count });
+    }
+    return days;
+  }, [applications]);
+
+  const monthLabels = useMemo(() => {
+    const labels: { text: string; colIndex: number }[] = [];
+    let lastMonth = -1;
+    
+    for (let col = 0; col < 53; col++) {
+      const firstDayOfWeek = heatmapData[col * 7]?.date;
+      if (!firstDayOfWeek) continue;
+      const currentMonth = firstDayOfWeek.getMonth();
+      
+      if (currentMonth !== lastMonth) {
+        labels.push({
+          text: firstDayOfWeek.toLocaleDateString(undefined, { month: 'short' }),
+          colIndex: col
+        });
+        lastMonth = currentMonth;
+      }
+    }
+    
+    const filteredLabels: typeof labels = [];
+    labels.forEach((label, idx) => {
+      if (idx === 0 || label.colIndex - labels[idx - 1].colIndex >= 3) {
+        filteredLabels.push(label);
+      }
+    });
+    
+    return filteredLabels;
+  }, [heatmapData]);
+
+  const getHeatmapColorClass = (count: number) => {
+    if (count === 0) return 'bg-slate-100/70 dark:bg-zinc-800/30 border border-slate-200/40 dark:border-zinc-800/20';
+    if (count === 1) return 'bg-emerald-500/15 dark:bg-emerald-400/10 border border-emerald-500/15';
+    if (count === 2) return 'bg-emerald-500/30 dark:bg-emerald-400/25 border border-emerald-500/25';
+    if (count === 3) return 'bg-emerald-500/60 dark:bg-emerald-400/50 border border-emerald-500/45';
+    return 'bg-emerald-500 dark:bg-emerald-400 border border-emerald-500 dark:border-emerald-400';
+  };
 
   const getStatusPillColor = (status: ApplicationStatus) => {
     switch (status) {
@@ -315,6 +383,79 @@ export function Dashboard() {
               <p className="text-[11px] text-mute mt-1 max-w-xs">Start tracking jobs in the Job Tracker or launch the scraper agent to populate the real-time flow funnel.</p>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Application Activity Heatmap */}
+      <div className="w-full px-12 mb-12">
+        <div className="max-w-7xl mx-auto bg-surface-soft border border-hairline-light rounded-lg p-8">
+          <div className="flex items-center justify-between mb-8 border-b border-hairline-light pb-4">
+            <div>
+              <h3 className="text-title-sm text-ink font-semibold uppercase tracking-wider">Application Frequency</h3>
+              <p className="text-[10px] text-mute mt-1 font-mono uppercase tracking-wide">Historical contribution calendar of sent applications</p>
+            </div>
+          </div>
+          
+          <div className="flex gap-3">
+            {/* Day labels column */}
+            <div className="grid grid-rows-7 text-[9px] text-mute font-mono uppercase tracking-wider select-none pr-1 justify-items-end items-center" style={{ height: '102px', rowGap: '3px', marginTop: '20px' }}>
+              <span></span>
+              <span>Mon</span>
+              <span></span>
+              <span>Wed</span>
+              <span></span>
+              <span>Fri</span>
+              <span></span>
+            </div>
+               {/* Heatmap Grid container */}
+            <div className="flex-1 overflow-x-auto pb-2 scrollbar-none">
+              {/* Month labels row */}
+              <div className="text-[9px] text-mute font-mono uppercase tracking-wider mb-2 select-none" style={{ display: 'grid', gridTemplateColumns: 'repeat(53, 1fr)', gap: '3px', minWidth: '760px', gridTemplateRows: 'auto' }}>
+                {monthLabels.map((lbl, idx) => (
+                  <span key={idx} style={{ gridColumn: `${lbl.colIndex + 1} / span 3`, gridRow: 1 }}>{lbl.text}</span>
+                ))}
+              </div>
+              
+              {/* Cells grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(53, 1fr)', gridTemplateRows: 'repeat(7, 12px)', gap: '3px', minWidth: '760px' }}>
+                {heatmapData.map((day, idx) => {
+                  const colorClass = getHeatmapColorClass(day.count);
+                  return (
+                    <div
+                      key={idx}
+                      className={clsx("w-3 h-3 rounded-[2px] transition-all cursor-pointer hover:scale-110", colorClass)}
+                      title={`${day.count} job${day.count === 1 ? '' : 's'} applied on ${day.dateStr}`}
+                      onMouseEnter={() => setHoveredDay(day)}
+                      onMouseLeave={() => setHoveredDay(null)}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center mt-3 text-[10px] text-mute font-mono">
+            <div>
+              {hoveredDay ? (
+                <span className="text-ink font-semibold animate-fade-in">
+                  {hoveredDay.count} job{hoveredDay.count === 1 ? '' : 's'} applied on{' '}
+                  {hoveredDay.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+              ) : (
+                <span>Hover over the cells to view application history</span>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-1.5 select-none">
+              <span>Less</span>
+              <div className="w-2.5 h-2.5 rounded-[1px] bg-slate-100/70 dark:bg-zinc-800/30 border border-slate-200/40 dark:border-zinc-800/20" />
+              <div className="w-2.5 h-2.5 rounded-[1px] bg-emerald-500/15 dark:bg-emerald-400/10 border border-emerald-500/15" />
+              <div className="w-2.5 h-2.5 rounded-[1px] bg-emerald-500/30 dark:bg-emerald-400/25 border border-emerald-500/25" />
+              <div className="w-2.5 h-2.5 rounded-[1px] bg-emerald-500/60 dark:bg-emerald-400/50 border border-emerald-500/45" />
+              <div className="w-2.5 h-2.5 rounded-[1px] bg-emerald-500 dark:bg-emerald-400 border border-emerald-500 dark:border-emerald-400" />
+              <span>More</span>
+            </div>
+          </div>
         </div>
       </div>
 

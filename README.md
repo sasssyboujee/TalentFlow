@@ -14,34 +14,37 @@
 
 ## Key Features
 
-### Autonomous Scraper & Gantt Timeline
-* **Agent Runner:** Deploy an autonomous agent that scrapes job descriptions from active URLs or raw text.
-* **Gantt progress tracker:** Monitor the agent's work in real-time through an interactive horizontal Gantt chart detailing each stage (DOM extraction, tokenization, FAISS vector index matching, resume summary synthesis, workspace persistence) with pulsing micro-animations.
+### Two-Stage Smart Job Scraper & Discover Agent
+* **Discover Jobs Console:** Scan major job portals (LinkedIn, Indeed, etc.) by entering your target title, preferred location, job type, and work mode. The agent simulates search scans, calculates match scores, and lists opportunities.
+* **Bulk Check-box Import:** Preview and select matching jobs to import into the tracker. Imported jobs automatically map to live Google Search URLs (e.g. `[Role] [Company] jobs`) to ensure you can always find the active application page.
+* **Dynamic Deferred Tailoring:** Importing jobs is lightning-fast because asset tailoring is deferred. Tailored resumes, cover letters, and interview questions are synthesized on-demand when you click into an application card for the first time.
 
-### AI Interview Coach & Sandbox Simulator
-* **Interactive Interview prep:** Practice answering mock interview questions inside a dedicated sandbox terminal interface.
-* **Structured STAR Evaluation:** Gemini grades your mock response against the **STAR method** (Situation, Task, Action, Result), scoring your answers from 0-100.
-* **Re-Script recommendation:** Receive constructive feedback and a fully polished, professional re-script recommendation aligned with your personal profile.
+### Drag-and-Drop Kanban Board with Multiselect Bulk Actions
+* **Tactile Pipeline Workflow:** Track applications across *Scraped, Ready, Applied, Interview, Rejected, Offer* stages. Drop columns feature active column drop-glow scaling using native HTML5 Drag-and-Drop APIs.
+* **Bulk Action Toolbar:** Select multiple job cards directly using inline check-boxes. A glassmorphic toolbar appears at the bottom allowing you to update status, move cards, or delete multiple applications in a single action.
 
-### Drag-and-Drop Kanban Board
-* **Tactile Workflow:** Move application cards across columns representing pipelines (*Queued, Ready, Applied, Interview, Rejected*).
-* **Native Physics:** Built using native HTML5 drag-and-drop APIs (zero external dependencies) with active column drop-glow scaling.
+### Interactive Sankey Pipeline Funnel
+* **Visual Flow Analytics:** Review your pipeline conversion rates dynamically using a sleek Sankey flow chart. The links use inline dynamic HSL linear gradients matching the source and target node colors, and displays cumulative node counts.
+
+### GitHub-Style Application Heatmap Calendar
+* **Historical Frequency Tracking:** View your job application density over the last 365 days (53 columns aligned by week starting on Sunday).
+* **Interactive Tooltip Console:** Hover over any square to view the exact number of jobs applied to on that date.
+* **Automatic Status Sync:** Dragging cards or manually moving them to applied columns (`applied`, `interview`, `offer`, `rejected`) automatically records the `dateApplied` timestamp to log your daily activity.
+
+### Chrome Extension (TalentFlow Connector)
+* **Bypass Login & Auth Walls:** Add job listings from private intranet portals, university job boards (like *Talent Connect*), or private company application portals. The extension scrapes the active DOM locally inside your logged-in browser tab and transmits it directly to the local dev app.
+* **Clipboard Fallback:** A built-in "Copy Text" button lets you copy clean scraped job descriptions with a single click, providing a robust fallback if the connection to the dev app is offline.
+* **Flexible Port Connection:** Dynamically matches any active localhost port or tab titled "TalentFlow".
 
 ### ATS-Compliant 1-Page Resume Builder
-* **Selectable Text Layer:** Replaces standard JS image-canvas PDF renderers with the browser's native print API (`window.print()`), ensuring PDFs are 100% searchable, select-enabled, and optimized for ATS parsers.
-* **Dynamic Theming & Typography:** Customize your resume and cover letter on-the-fly with settings-driven themes (Classic, Modern, Minimal) and premium typography choices.
-* **Auto-Sized Page Constraint:** Implements a strict typographical grid scale that clamps summary lengths (maximum 3 sentences) and layouts to fit exactly onto a single page without overflowing.
-
-### Portfolio Projects & Profile Management
-* **Update / Merge Profile Data:** Auto-import your profile using AI from LinkedIn or resume text with the ability to safely merge new experience/projects without overwriting existing data.
-* **Tailored Mapping:** Add your technology portfolios, links, and project descriptions inside your profile.
-* **Keyword Synthesis:** The AI automatically extracts tech-stack tags from job descriptions and dynamically inserts the two most relevant projects into your tailored resume templates.
+* **Searchable Native Print Output:** Leverages the browser's native print API (`window.print()`) instead of drawing standard image canvas elements, ensuring PDFs are 100% text-selectable and parsed accurately by ATS parsers.
+* **Auto-Sized Page Constraint:** Implements a strict typographical grid scale that limits tailored summaries and layout blocks to fit perfectly on a single page.
+* **Diff Editor & Rescripts:** Edit tailored summaries in a side-by-side Diff editor and practice mock interview questions with voice dictation (Web Speech API) graded against the STAR method.
 
 ### System Settings Manager
 * **Custom API Key & Model Configuration:** Override environment variables by saving your API key directly in local storage and switching between `gemini-3.5-flash` and `gemini-2.5-pro` dynamically.
 * **Agent Rate-Limiting & Thresholds:** Configure custom scraper timeouts and minimum match thresholds.
 * **Coaching Personas:** Adjust the AI Interview Coach profile (STAR Coach, HR Recruiter, Technical Lead) and grading difficulty.
-* **Workspace Data Backups:** Export your entire workspace (profile data, tracking logs, and settings) as a single JSON file, or import backups to restore states.
 
 ---
 
@@ -86,7 +89,7 @@ VITE_GEMINI_API_KEY="your_actual_gemini_api_key"
 ```bash
 npm run dev
 ```
-Open your browser and navigate to `http://localhost:5173`.
+Open your browser and navigate to `http://localhost:3000`.
 
 ### 5. Build for production
 ```bash

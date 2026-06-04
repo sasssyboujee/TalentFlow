@@ -57,6 +57,7 @@ const INITIAL_JOBS: JobApplication[] = [
     url: 'https://example.com/jobs/frontend',
     status: 'interview',
     dateAdded: new Date(Date.now() - 86400000 * 3).toISOString(),
+    dateApplied: new Date(Date.now() - 86400000 * 3).toISOString(),
     matchScore: 92,
     extractedKeywords: ['React', 'TypeScript', 'Performance', 'Redux'],
     tailoredResumeSnippet: 'Spearheaded frontend architecture using React and TypeScript, improving core web vitals by 40%...',
@@ -86,6 +87,7 @@ const INITIAL_JOBS: JobApplication[] = [
     url: 'https://example.com/jobs/ai-eng',
     status: 'applied',
     dateAdded: new Date(Date.now() - 86400000 * 1).toISOString(),
+    dateApplied: new Date(Date.now() - 86400000 * 1).toISOString(),
     matchScore: 88,
     extractedKeywords: ['Python', 'Node.js', 'LLMs', 'Pinecone'],
   },
@@ -279,7 +281,16 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   const updateApplicationStatus = (id: string, status: JobApplication['status']) => {
     setApplicationsState(prev => {
-      const nextApps = prev.map(app => app.id === id ? { ...app, status } : app);
+      const nextApps = prev.map(app => {
+        if (app.id === id) {
+          const updates: Partial<JobApplication> = { status };
+          if (['applied', 'interview', 'offer', 'rejected'].includes(status) && !app.dateApplied) {
+            updates.dateApplied = new Date().toISOString();
+          }
+          return { ...app, ...updates };
+        }
+        return app;
+      });
       localStorage.setItem('agent_applications', JSON.stringify(nextApps));
       return nextApps;
     });
@@ -287,7 +298,16 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   const updateApplicationsStatus = (ids: string[], status: JobApplication['status']) => {
     setApplicationsState(prev => {
-      const nextApps = prev.map(app => ids.includes(app.id) ? { ...app, status } : app);
+      const nextApps = prev.map(app => {
+        if (ids.includes(app.id)) {
+          const updates: Partial<JobApplication> = { status };
+          if (['applied', 'interview', 'offer', 'rejected'].includes(status) && !app.dateApplied) {
+            updates.dateApplied = new Date().toISOString();
+          }
+          return { ...app, ...updates };
+        }
+        return app;
+      });
       localStorage.setItem('agent_applications', JSON.stringify(nextApps));
       return nextApps;
     });

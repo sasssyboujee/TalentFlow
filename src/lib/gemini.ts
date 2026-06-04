@@ -25,25 +25,58 @@ function cleanJSONString(text: string): string {
     }
   }
   
-  // Find first root structure and slice
   const firstBrace = cleaned.indexOf('{');
   const firstBracket = cleaned.indexOf('[');
   let startIdx = -1;
-  let endChar = '';
+  let isObject = true;
   
   if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
     startIdx = firstBrace;
-    endChar = '}';
+    isObject = true;
   } else if (firstBracket !== -1) {
     startIdx = firstBracket;
-    endChar = ']';
+    isObject = false;
   }
   
-  if (startIdx !== -1) {
-    const lastIdx = cleaned.lastIndexOf(endChar);
-    if (lastIdx !== -1 && lastIdx > startIdx) {
-      cleaned = cleaned.substring(startIdx, lastIdx + 1);
+  if (startIdx === -1) {
+    return cleaned;
+  }
+
+  // Scan and count braces to find the exact end of the JSON object/array
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  
+  for (let i = startIdx; i < cleaned.length; i++) {
+    const char = cleaned[i];
+    
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+    } else {
+      if (char === '"') {
+        inString = true;
+      } else if (char === '{' || char === '[') {
+        depth++;
+      } else if (char === '}' || char === ']') {
+        depth--;
+        if (depth === 0) {
+          return cleaned.substring(startIdx, i + 1);
+        }
+      }
     }
+  }
+  
+  // Fallback to substring if brace counting fails to close
+  const endChar = isObject ? '}' : ']';
+  const lastIdx = cleaned.lastIndexOf(endChar);
+  if (lastIdx !== -1 && lastIdx > startIdx) {
+    return cleaned.substring(startIdx, lastIdx + 1);
   }
   
   return cleaned;

@@ -42,6 +42,7 @@ export interface JobApplication {
   description?: string;
   status: ApplicationStatus;
   dateAdded: string;
+  dateApplied?: string;
   matchScore?: number;
   extractedKeywords?: string[];
   relevantProjectIds?: string[];
