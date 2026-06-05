@@ -133,6 +133,21 @@ export interface PrefilledJob {
   autoRun?: boolean;
 }
 
+export interface RunnerState {
+  inputMode: 'url' | 'text' | 'discover';
+  url: string;
+  jdText: string;
+  targetTitle: string;
+  jobType: string;
+  location: string;
+  workMode: string;
+  discoveredJobs: any[];
+  selectedJobIds: Record<string, boolean>;
+  logs: AgentLog[];
+  currentStep: number;
+  isRunning: boolean;
+}
+
 interface AppStateContextType {
   view: ViewState;
   setView: (view: ViewState) => void;
@@ -154,6 +169,8 @@ interface AppStateContextType {
   emailSuggestions: EmailSuggestion[];
   saveSuggestions: (suggestions: EmailSuggestion[]) => void;
   updateSuggestionStatus: (id: string, status: EmailSuggestion['status']) => void;
+  runnerState: RunnerState;
+  setRunnerState: React.Dispatch<React.SetStateAction<RunnerState>>;
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -161,6 +178,42 @@ const AppStateContext = createContext<AppStateContextType | undefined>(undefined
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [view, setView] = useState<ViewState>('dashboard');
   const [prefilledJob, setPrefilledJob] = useState<PrefilledJob | undefined>(undefined);
+
+  const [runnerState, setRunnerState] = useState<RunnerState>(() => {
+    let initialTitle = 'Software Engineer';
+    let initialLocation = 'San Francisco, CA';
+    
+    try {
+      const savedProfile = localStorage.getItem('agent_profile');
+      if (savedProfile) {
+        const parsed = JSON.parse(savedProfile);
+        if (parsed.experience && parsed.experience.length > 0) {
+          initialTitle = parsed.experience[0].role || initialTitle;
+        }
+        initialLocation = parsed.location || initialLocation;
+      } else {
+        if (INITIAL_PROFILE.experience && INITIAL_PROFILE.experience.length > 0) {
+          initialTitle = INITIAL_PROFILE.experience[0].role || initialTitle;
+        }
+        initialLocation = INITIAL_PROFILE.location || initialLocation;
+      }
+    } catch (e) {}
+
+    return {
+      inputMode: 'url',
+      url: '',
+      jdText: '',
+      targetTitle: initialTitle,
+      jobType: 'full-time',
+      location: initialLocation,
+      workMode: 'all',
+      discoveredJobs: [],
+      selectedJobIds: {},
+      logs: [],
+      currentStep: 0,
+      isRunning: false
+    };
+  });
 
   // Listen for Chrome Extension events
   useEffect(() => {
@@ -365,7 +418,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       applications, addApplication, addApplications, deleteApplication, deleteApplications, updateApplicationStatus, updateApplicationsStatus, updateApplicationLogs, updateApplicationDetails,
       settings, updateSettings,
       prefilledJob, setPrefilledJob,
-      emailSuggestions, saveSuggestions, updateSuggestionStatus
+      emailSuggestions, saveSuggestions, updateSuggestionStatus,
+      runnerState, setRunnerState
     }}>
       {children}
     </AppStateContext.Provider>

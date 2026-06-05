@@ -72,26 +72,55 @@ interface AgentRunnerProps {
 }
 
 export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
-  const { profile, addApplication, addApplications, setView, settings, applications, prefilledJob, setPrefilledJob } = useAppState();
-  const [inputMode, setInputMode] = useState<'url' | 'text' | 'discover'>('url');
-  const [url, setUrl] = useState('');
-  const [jdText, setJdText] = useState('');
+  const { 
+    profile, 
+    addApplication, 
+    addApplications, 
+    setView, 
+    settings, 
+    applications, 
+    prefilledJob, 
+    setPrefilledJob,
+    runnerState,
+    setRunnerState
+  } = useAppState();
 
-  // Discover Mode fields
-  const [targetTitle, setTargetTitle] = useState('');
-  const [jobType, setJobType] = useState('full-time');
-  const [location, setLocation] = useState('');
-  const [workMode, setWorkMode] = useState('all');
-  const [discoveredJobs, setDiscoveredJobs] = useState<any[]>([]);
-  const [selectedJobIds, setSelectedJobIds] = useState<Record<string, boolean>>({});
+  const {
+    inputMode,
+    url,
+    jdText,
+    targetTitle,
+    jobType,
+    location,
+    workMode,
+    discoveredJobs,
+    selectedJobIds,
+    isRunning,
+    logs,
+    currentStep
+  } = runnerState;
 
-  const [isRunning, setIsRunning] = useState(false);
-  const [logs, setLogs] = useState<AgentLog[]>([]);
-  const [currentStep, setCurrentStep] = useState(0);
+  const setInputMode = (val: 'url' | 'text' | 'discover') => setRunnerState(prev => ({ ...prev, inputMode: val }));
+  const setUrl = (val: string) => setRunnerState(prev => ({ ...prev, url: val }));
+  const setJdText = (val: string) => setRunnerState(prev => ({ ...prev, jdText: val }));
+  const setTargetTitle = (val: string) => setRunnerState(prev => ({ ...prev, targetTitle: val }));
+  const setJobType = (val: string) => setRunnerState(prev => ({ ...prev, jobType: val }));
+  const setLocation = (val: string) => setRunnerState(prev => ({ ...prev, location: val }));
+  const setWorkMode = (val: string) => setRunnerState(prev => ({ ...prev, workMode: val }));
+  const setDiscoveredJobs = (val: any[] | ((prev: any[]) => any[])) => setRunnerState(prev => ({ ...prev, discoveredJobs: typeof val === 'function' ? val(prev.discoveredJobs) : val }));
+  const setSelectedJobIds = (val: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => setRunnerState(prev => ({ ...prev, selectedJobIds: typeof val === 'function' ? val(prev.selectedJobIds) : val }));
+  const setIsRunning = (val: boolean) => setRunnerState(prev => ({ ...prev, isRunning: val }));
+  const setLogs = (val: AgentLog[] | ((prev: AgentLog[]) => AgentLog[])) => setRunnerState(prev => ({ ...prev, logs: typeof val === 'function' ? val(prev.logs) : val }));
+  const setCurrentStep = (val: number) => setRunnerState(prev => ({ ...prev, currentStep: val }));
+
   const [autoSelectProjects, setAutoSelectProjects] = useState(!!settings.autoSelectProjects);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const processedPrefillRef = useRef<string | null>(null);
-  const runningRef = useRef(false);
+
+  const runningRef = useRef(isRunning);
+  useEffect(() => {
+    runningRef.current = isRunning;
+  }, [isRunning]);
 
   const setRunning = (val: boolean) => {
     runningRef.current = val;
@@ -101,17 +130,21 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
     }
   };
 
-  // Initialize Search Preferences based on Profile
+  // Initialize Search Preferences based on Profile ONLY if they are not already set
   useEffect(() => {
     if (profile) {
-      if (profile.experience && profile.experience.length > 0) {
-        setTargetTitle(profile.experience[0].role || '');
-      } else {
-        setTargetTitle('Software Engineer');
+      if (!targetTitle) {
+        if (profile.experience && profile.experience.length > 0) {
+          setTargetTitle(profile.experience[0].role || '');
+        } else {
+          setTargetTitle('Software Engineer');
+        }
       }
-      setLocation(profile.location || 'San Francisco, CA');
+      if (!location) {
+        setLocation(profile.location || 'San Francisco, CA');
+      }
     }
-  }, [profile]);
+  }, [profile, targetTitle, location]);
 
   useEffect(() => {
     setAutoSelectProjects(!!settings.autoSelectProjects);

@@ -774,9 +774,6 @@ export function Dashboard() {
           <div className="flex items-center gap-2">
             <span className="font-display font-semibold text-on-dark text-sm">TalentFlow</span>
           </div>
-          <div>
-            System connection secure. Encrypted via TalentFlow-VPN. 2026.
-          </div>
         </div>
       </footer>
 
