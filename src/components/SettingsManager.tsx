@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppState } from '../state';
-import { Key, Eye, EyeOff, Shield, ShieldAlert, Cpu, Sliders, FileText, Bot, Download, Upload, Trash2, CheckCircle2, Plus, Mail, Activity } from 'lucide-react';
+import { Key, Eye, EyeOff, Shield, ShieldAlert, Cpu, Sliders, FileText, Bot, Download, Upload, Trash2, CheckCircle2, Plus, Mail, Activity, Settings } from 'lucide-react';
 
 export function SettingsManager() {
   const { settings, updateSettings, profile, setProfile, applications, addApplication } = useAppState();
@@ -179,9 +179,16 @@ export function SettingsManager() {
 
   return (
     <div className="w-full h-full flex flex-col overflow-y-auto bg-canvas">
-      <header className="px-12 py-8 bg-canvas border-b border-hairline-light shrink-0 text-left max-w-7xl mx-auto w-full">
-        <h1 className="text-display-md text-ink mb-2 font-semibold tracking-[-1px] uppercase">System Settings</h1>
-        <p className="text-sm text-charcoal">Configure runtime endpoints, autonomous agent rules, document formats, and backups.</p>
+      <header className="px-12 py-10 bg-canvas border-b border-hairline-light shrink-0 text-left w-full max-w-7xl mx-auto flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center shadow-xs">
+              <Settings className="w-5 h-5" />
+            </div>
+            <h1 className="text-heading-lg text-ink font-bold tracking-tight uppercase">System Settings</h1>
+          </div>
+          <p className="text-xs text-mute mt-2 max-w-xl">Configure runtime endpoints, autonomous agent rules, document formats, and backups.</p>
+        </div>
       </header>
 
       <div className="flex-1 max-w-4xl mx-auto w-full px-12 py-10 space-y-10 text-left">

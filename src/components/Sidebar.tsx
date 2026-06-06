@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppState } from '../state';
-import { LayoutDashboard, ListTodo, Bot, UserCircle, Settings, Mail, Sun, Moon, Calendar, Compass, LogOut, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Bot, UserCircle, Settings, Mail, Sun, Moon, Calendar, Compass, LogOut, ShieldAlert } from 'lucide-react';
 import clsx from 'clsx';
 
 export function Sidebar() {
@@ -9,7 +9,7 @@ export function Sidebar() {
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'tracker', label: 'Job Tracker', icon: ListTodo },
+    { id: 'tracker', label: 'Job Tracker', icon: Briefcase },
     { id: 'runner', label: 'FlowBot', icon: Bot },
     { id: 'email-scan', label: 'AI Email Sync', icon: Mail },
     { id: 'calendar', label: 'Interview Schedule', icon: Calendar },

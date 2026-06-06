@@ -59,16 +59,21 @@ export function JobTracker() {
 
   return (
     <div className="w-full h-full flex flex-col overflow-hidden bg-canvas relative">
-      <header className="px-12 py-8 bg-canvas border-b border-hairline-light shrink-0 text-left max-w-7xl mx-auto w-full flex justify-between items-center">
+      <header className="px-12 py-10 bg-canvas border-b border-hairline-light shrink-0 text-left w-full max-w-7xl mx-auto flex items-center justify-between">
         <div>
-          <h1 className="text-display-md text-ink mb-2 font-semibold tracking-[-1px] uppercase">Job Tracker</h1>
-          <p className="text-sm text-charcoal">Manage and track your automated applications. Click any card to view tailored assets.</p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center shadow-xs">
+              <Briefcase className="w-5 h-5" />
+            </div>
+            <h1 className="text-heading-lg text-ink font-bold tracking-tight uppercase">Job Tracker</h1>
+          </div>
+          <p className="text-xs text-mute mt-2 max-w-xl">Manage and track your automated applications. Click any card to view tailored assets.</p>
         </div>
         <button 
           onClick={() => setIsRunnerOpen(true)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-focus text-on-primary rounded-md text-sm font-semibold transition-colors border-none cursor-pointer shadow-product"
+          className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-focus text-on-primary rounded-md text-xs font-semibold uppercase tracking-wider transition-colors border-none cursor-pointer shadow-sm"
         >
-          <Bot className="w-4 h-4" /> Run AI Agent
+          <Bot className="w-4 h-4" /> Run FlowBot
         </button>
       </header>
 

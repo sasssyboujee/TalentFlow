@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppState } from '../state';
-import { Save, AlertCircle, Plus, Trash2, FileText, Loader2, Sparkles, AlertTriangle, Download, Upload, File, X } from 'lucide-react';
+import { Save, AlertCircle, Plus, Trash2, FileText, Loader2, Sparkles, AlertTriangle, Download, Upload, File, X, UserCircle } from 'lucide-react';
 import { parseProfileData } from '../lib/gemini';
 import clsx from 'clsx';
 import type { WorkExperience, Education } from '../types';
@@ -275,9 +275,16 @@ export function ProfileManager() {
 
   return (
     <div className="w-full h-full flex flex-col overflow-y-auto bg-canvas-light">
-      <header className="px-12 py-20 bg-canvas-light border-b border-hairline-light shrink-0 text-left max-w-7xl mx-auto w-full">
-        <h1 className="text-display-xl text-ink mb-4 font-semibold tracking-tight uppercase">Structured Profile</h1>
-        <p className="text-lead text-charcoal max-w-2xl">This data is injected into the vector DB for contextual matching and Gemini synthesis.</p>
+      <header className="px-12 py-10 bg-canvas border-b border-hairline-light shrink-0 text-left w-full max-w-7xl mx-auto flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center shadow-xs">
+              <UserCircle className="w-5 h-5" />
+            </div>
+            <h1 className="text-heading-lg text-ink font-bold tracking-tight uppercase">My Data Profile</h1>
+          </div>
+          <p className="text-xs text-mute mt-2 max-w-xl">This data is injected into the vector DB for contextual matching and Gemini synthesis.</p>
+        </div>
       </header>
 
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col max-w-5xl mx-auto w-full text-left">

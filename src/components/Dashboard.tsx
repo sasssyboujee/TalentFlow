@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useAppState } from '../state';
-import { Target, CheckCircle2, RotateCw, Briefcase, TrendingUp, Activity, Bot } from 'lucide-react';
+import { Target, CheckCircle2, RotateCw, Briefcase, TrendingUp, Activity, Bot, LayoutDashboard } from 'lucide-react';
 import clsx from 'clsx';
 import type { ApplicationStatus } from '../types';
 function Sparkline({ data, color = 'currentColor' }: { data: number[]; color?: string }) {
@@ -380,35 +380,35 @@ export function Dashboard() {
   return (
     <div className="w-full min-h-full flex flex-col bg-canvas text-left">
       
-      {/* Editorial Header Band */}
-      <div className="w-full px-12 pt-24 pb-12 max-w-7xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="max-w-2xl">
-          <h1 className="text-display-lg text-ink font-semibold tracking-[-1.5px] uppercase">
-            Dashboard
-          </h1>
-          <p className="text-body text-sm mt-3 leading-relaxed max-w-lg">
-            Monitor your autonomous application pipelines, analyze skill embeddings, and review recent matching alerts.
-          </p>
+      <header className="px-12 py-10 bg-canvas border-b border-hairline-light shrink-0 text-left w-full max-w-7xl mx-auto flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center shadow-xs">
+              <LayoutDashboard className="w-5 h-5" />
+            </div>
+            <h1 className="text-heading-lg text-ink font-bold tracking-tight uppercase">Dashboard</h1>
+          </div>
+          <p className="text-xs text-mute mt-2 max-w-xl">Monitor your autonomous application pipelines, analyze skill embeddings, and review recent matching alerts.</p>
         </div>
         
         {/* Top-Right Action Buttons Group */}
         <div className="flex items-center gap-3 shrink-0">
           <button 
             onClick={() => setView('tracker')}
-            className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-ink bg-canvas hover:bg-surface-soft border border-hairline-light rounded-md shadow-product cursor-pointer transition-all"
+            className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-ink bg-canvas hover:bg-surface-soft border border-hairline-light rounded-md shadow-sm cursor-pointer transition-all uppercase tracking-wider"
           >
-            <Briefcase className="w-4 h-4 text-mute" />
+            <Briefcase className="w-3.5 h-3.5 text-mute" />
             Job Tracker
           </button>
           <button 
             onClick={() => setView('runner')}
-            className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-on-primary bg-primary hover:bg-primary-focus rounded-md shadow-product cursor-pointer transition-all border-none"
+            className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-on-primary bg-primary hover:bg-primary-focus rounded-md shadow-sm cursor-pointer transition-all border-none uppercase tracking-wider"
           >
-            <Bot className="w-4 h-4" />
+            <Bot className="w-3.5 h-3.5" />
             Deploy FlowBot
           </button>
         </div>
-      </div>
+      </header>
 
       {/* AI Email Scanner Alert Banner */}
       {pendingSuggestions.length > 0 && (

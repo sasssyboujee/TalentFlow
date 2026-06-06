@@ -202,16 +202,21 @@ export function CalendarView() {
   return (
     <div className="w-full h-full flex flex-col bg-canvas">
       {/* Header */}
-      <header className="px-12 py-8 bg-canvas border-b border-hairline-light shrink-0 text-left max-w-7xl mx-auto w-full flex justify-between items-center">
+      <header className="px-12 py-10 bg-canvas border-b border-hairline-light shrink-0 text-left w-full max-w-7xl mx-auto flex items-center justify-between">
         <div>
-          <h1 className="text-display-md text-ink mb-2 font-semibold tracking-[-1px] uppercase">Interview Schedule</h1>
-          <p className="text-sm text-charcoal">Manage scheduled calls, technical rounds, and offer review sessions.</p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center shadow-xs">
+              <CalendarIcon className="w-5 h-5" />
+            </div>
+            <h1 className="text-heading-lg text-ink font-bold tracking-tight uppercase">Interview Schedule</h1>
+          </div>
+          <p className="text-xs text-mute mt-2 max-w-xl">Manage scheduled calls, technical rounds, and offer review sessions.</p>
         </div>
         <button
           onClick={() => openScheduleModal()}
-          className="bg-canvas-dark hover:bg-surface-elevated text-on-dark px-5 py-2.5 rounded-md font-semibold transition-all flex items-center gap-2 cursor-pointer uppercase text-xs border-none shadow-product"
+          className="bg-primary hover:bg-primary-focus text-on-primary px-4 py-2.5 rounded-md font-semibold transition-all flex items-center gap-2 cursor-pointer uppercase text-xs border-none shadow-sm"
         >
-          <Plus className="w-4 h-4" /> Schedule Call
+          <Plus className="w-3.5 h-3.5" /> Schedule Call
         </button>
       </header>
 

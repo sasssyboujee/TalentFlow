@@ -46,10 +46,15 @@ export function LinkedInOptimizer() {
   return (
     <div className="w-full h-full flex flex-col bg-canvas text-left">
       {/* Header */}
-      <header className="px-12 py-8 bg-canvas border-b border-hairline-light shrink-0 max-w-7xl mx-auto w-full flex justify-between items-center">
+      <header className="px-12 py-10 bg-canvas border-b border-hairline-light shrink-0 text-left w-full max-w-7xl mx-auto flex items-center justify-between">
         <div>
-          <h1 className="text-display-md text-ink mb-2 font-semibold tracking-[-1px] uppercase">LinkedIn Optimizer</h1>
-          <p className="text-sm text-charcoal">Tune your profile summary, headline, and experience descriptions for search visibility (SEO).</p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center shadow-xs">
+              <Compass className="w-5 h-5" />
+            </div>
+            <h1 className="text-heading-lg text-ink font-bold tracking-tight uppercase">LinkedIn Optimizer</h1>
+          </div>
+          <p className="text-xs text-mute mt-2 max-w-xl">Tune your profile summary, headline, and experience descriptions for search visibility (SEO).</p>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1 bg-accent-teal/10 text-accent-teal border border-accent-teal/20 text-[10px] font-bold uppercase rounded-full font-mono shrink-0">
           <Sparkles className="w-3.5 h-3.5" /> SEO Engine Active
