@@ -178,6 +178,8 @@ interface AppStateContextType {
   login: (email: string, password: string) => Promise<boolean>;
   loginAsGuest: () => void;
   logout: () => void;
+  selectedJobId?: string;
+  setSelectedJobId: (id?: string) => void;
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -185,6 +187,7 @@ const AppStateContext = createContext<AppStateContextType | undefined>(undefined
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [view, setView] = useState<ViewState>('dashboard');
   const [prefilledJob, setPrefilledJob] = useState<PrefilledJob | undefined>(undefined);
+  const [selectedJobId, setSelectedJobId] = useState<string | undefined>(undefined);
 
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -589,7 +592,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       user,
       login,
       loginAsGuest,
-      logout
+      logout,
+      selectedJobId,
+      setSelectedJobId
     }}>
       {children}
     </AppStateContext.Provider>

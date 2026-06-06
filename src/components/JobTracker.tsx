@@ -24,6 +24,41 @@ const getClickableUrl = (url: string, role: string, company: string) => {
   return url;
 };
 
+const highlightKeywords = (text: string, keywords: string[] | undefined, active: boolean): React.ReactNode => {
+  if (!text) return '';
+  if (!active || !keywords || keywords.length === 0) return text;
+
+  const sortedKeywords = [...keywords]
+    .map(k => k.trim())
+    .filter(k => k.length > 1)
+    .sort((a, b) => b.length - a.length);
+
+  if (sortedKeywords.length === 0) return text;
+
+  const escapedKeywords = sortedKeywords.map(k => k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
+  const pattern = new RegExp(`\\b(${escapedKeywords.join('|')})\\b`, 'gi');
+  const parts = text.split(pattern);
+
+  return (
+    <>
+      {parts.map((part, i) => {
+        const isMatch = i % 2 !== 0;
+        if (isMatch) {
+          return (
+            <mark 
+              key={i} 
+              className="bg-accent-teal/15 dark:bg-accent-teal/25 text-accent-teal px-1 rounded font-bold border-b border-accent-teal/30 select-all"
+            >
+              {part}
+            </mark>
+          );
+        }
+        return part;
+      })}
+    </>
+  );
+};
+
 const COLUMNS: { 
   id: ApplicationStatus; 
   label: string; 
@@ -37,23 +72,84 @@ const COLUMNS: {
 ];
 
 export function JobTracker() {
-  const { applications, updateApplicationStatus, profile, deleteApplications, updateApplicationsStatus } = useAppState();
+  const { 
+    applications, 
+    updateApplicationStatus, 
+    profile, 
+    deleteApplications, 
+    updateApplicationsStatus,
+    selectedJobId,
+    setSelectedJobId
+  } = useAppState();
   const [selectedApp, setSelectedApp] = useState<JobApplication | null>(null);
   const [draggedOverColumn, setDraggedOverColumn] = useState<ApplicationStatus | null>(null);
   const [expandedColumn, setExpandedColumn] = useState<ApplicationStatus | null>(null);
   const [isRunnerOpen, setIsRunnerOpen] = useState(false);
   const [selectedAppIds, setSelectedAppIds] = useState<Record<string, boolean>>({});
 
+  // Transition / Animation syncing states
+  const [detailsApp, setDetailsApp] = useState<JobApplication | null>(null);
+  const [isDetailsOpenAnim, setIsDetailsOpenAnim] = useState(false);
+  const [colData, setColData] = useState<ApplicationStatus | null>(null);
+  const [isColOpenAnim, setIsColOpenAnim] = useState(false);
+  const [runnerActive, setRunnerActive] = useState(false);
+  const [isRunnerOpenAnim, setIsRunnerOpenAnim] = useState(false);
+
+  // Sync selectedApp to detailsApp with exit timeout
+  useEffect(() => {
+    if (selectedApp) {
+      const latestApp = applications.find(app => app.id === selectedApp.id) || selectedApp;
+      setDetailsApp(latestApp);
+      setIsDetailsOpenAnim(true);
+    } else {
+      setIsDetailsOpenAnim(false);
+      const timer = setTimeout(() => {
+        setDetailsApp(null);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedApp, applications]);
+
+  // Sync expandedColumn to colData with exit timeout
+  useEffect(() => {
+    if (expandedColumn) {
+      setColData(expandedColumn);
+      setIsColOpenAnim(true);
+    } else {
+      setIsColOpenAnim(false);
+      const timer = setTimeout(() => {
+        setColData(null);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [expandedColumn]);
+
+  // Sync isRunnerOpen to runnerActive with exit timeout
+  useEffect(() => {
+    if (isRunnerOpen) {
+      setRunnerActive(true);
+      setIsRunnerOpenAnim(true);
+    } else {
+      setIsRunnerOpenAnim(false);
+      const timer = setTimeout(() => {
+        setRunnerActive(false);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isRunnerOpen]);
+
+  useEffect(() => {
+    if (selectedJobId) {
+      const found = applications.find(app => app.id === selectedJobId);
+      if (found) {
+        setSelectedApp(found);
+      }
+      setSelectedJobId(undefined);
+    }
+  }, [selectedJobId, applications, setSelectedJobId]);
+
   const getAppsByStatus = (status: ApplicationStatus) => 
     applications.filter(app => app.status === status);
-
-  const appsForExpandedColumn = expandedColumn ? getAppsByStatus(expandedColumn) : [];
-  const expandedColData = expandedColumn ? COLUMNS.find(c => c.id === expandedColumn) : null;
-
-  // Sync details modal if active app changes status or details in state
-  const activeApp = selectedApp 
-    ? applications.find(app => app.id === selectedApp.id) || null
-    : null;
 
   const selectedCount = Object.values(selectedAppIds).filter(Boolean).length;
 
@@ -155,18 +251,20 @@ export function JobTracker() {
         </div>
       </div>
 
-      {activeApp && (
+      {detailsApp && (
         <JobDetailsModal 
-          app={activeApp} 
+          app={detailsApp} 
           profile={profile} 
+          isOpen={isDetailsOpenAnim}
           onClose={() => setSelectedApp(null)} 
         />
       )}
 
-      {expandedColumn && expandedColData && (
+      {colData && (
         <ExpandedColumnModal
-          column={expandedColData}
-          apps={appsForExpandedColumn}
+          column={COLUMNS.find(c => c.id === colData)!}
+          apps={getAppsByStatus(colData)}
+          isOpen={isColOpenAnim}
           onClose={() => setExpandedColumn(null)}
           onSelectJob={(app) => setSelectedApp(app)}
           updateApplicationStatus={updateApplicationStatus}
@@ -180,9 +278,15 @@ export function JobTracker() {
         />
       )}
 
-      {isRunnerOpen && createPortal(
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-8 bg-canvas-dark/80 backdrop-blur-xs print:hidden">
-          <div className="bg-canvas-light w-full max-w-6xl h-[85vh] rounded-xl border border-hairline-light flex flex-col overflow-hidden text-left shadow-2xl">
+      {runnerActive && createPortal(
+        <div className={clsx(
+          "fixed inset-0 z-[60] flex items-center justify-center p-8 bg-canvas-dark/80 backdrop-blur-xs print:hidden",
+          isRunnerOpenAnim ? "animate-modal-backdrop" : "opacity-0 transition-opacity duration-200 ease-in"
+        )}>
+          <div className={clsx(
+            "bg-canvas-light w-full max-w-6xl h-[85vh] rounded-xl border border-hairline-light flex flex-col overflow-hidden text-left shadow-2xl",
+            isRunnerOpenAnim ? "animate-modal-content" : "opacity-0 scale-96 translate-y-3 transition-all duration-200 ease-in"
+          )}>
             <AgentRunner isEmbedded={true} onClose={() => setIsRunnerOpen(false)} />
           </div>
         </div>,
@@ -374,10 +478,11 @@ function JobCard({ app, onStatusChange, onSelect, onDragEnd, isSelected = false,
 interface JobDetailsModalProps {
   app: JobApplication;
   profile: UserProfile;
+  isOpen: boolean;
   onClose: () => void;
 }
 
-function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
+function JobDetailsModal({ app, profile, isOpen, onClose }: JobDetailsModalProps) {
   const { updateApplicationDetails } = useAppState();
 
   const [activeTab, setActiveTab] = useState<'match' | 'resume' | 'cover' | 'interview'>('match');
@@ -390,6 +495,8 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
   // Resume diff editing states
   const [editedResumeSnippet, setEditedResumeSnippet] = useState(app.tailoredResumeSnippet || '');
   const [isResumeDirty, setIsResumeDirty] = useState(false);
+  const [resumeViewMode, setResumeViewMode] = useState<'visual' | 'source'>('visual');
+  const [showHighlights, setShowHighlights] = useState(true);
 
   // Lazy asset tailoring states
   const [isTailoring, setIsTailoring] = useState(false);
@@ -634,8 +741,14 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-8 bg-canvas-dark/80 backdrop-blur-xs">
-      <div className="bg-canvas-light w-full max-w-7xl h-[90vh] rounded-xl border border-hairline-light flex flex-col overflow-hidden text-left shadow-2xl">
+    <div className={clsx(
+      "fixed inset-0 z-50 flex items-center justify-center p-8 bg-canvas-dark/80 backdrop-blur-xs transition-opacity",
+      isOpen ? "animate-modal-backdrop" : "opacity-0 transition-opacity duration-200 ease-in pointer-events-none"
+    )}>
+      <div className={clsx(
+        "bg-canvas-light w-full max-w-7xl h-[90vh] rounded-xl border border-hairline-light flex flex-col overflow-hidden text-left shadow-2xl transition-all",
+        isOpen ? "animate-modal-content" : "opacity-0 scale-96 translate-y-3 transition-all duration-200 ease-in"
+      )}>
         {/* Header */}
         <header className="px-10 py-6 border-b border-hairline-light flex justify-between items-center bg-canvas-light shrink-0">
           <div>
@@ -824,95 +937,196 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
                 </div>
               )}
 
-              {activeTab === 'resume' && (
-                <div className="space-y-6 flex flex-col h-full text-left">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <Briefcase className="w-6 h-6 text-primary" />
-                      <div>
-                        <h4 className="text-heading-sm font-semibold text-ink">Resume Alignment Pane</h4>
-                        <p className="text-sm text-mute">Compare and edit your tailored experience before downloading.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={handleSaveEditedResume}
-                        disabled={!isResumeDirty}
-                        className={clsx(
-                          "px-4 py-2 border rounded-md text-xs font-bold uppercase transition-colors cursor-pointer",
-                          isResumeDirty 
-                            ? "bg-primary text-on-primary border-primary hover:bg-primary-focus" 
-                            : "bg-transparent text-mute border-hairline-light cursor-not-allowed"
-                        )}
-                      >
-                        Save Edits
-                      </button>
-                      <button
-                        onClick={handleDownloadResume}
-                        disabled={isGeneratingResume}
-                        className="flex items-center gap-2 px-5 py-2 bg-canvas-dark hover:bg-surface-elevated disabled:opacity-50 text-on-dark rounded-md text-xs font-bold uppercase transition-colors cursor-pointer border-none shadow-product"
-                      >
-                        {isGeneratingResume ? <Loader2 className="w-4 h-4 animate-spin text-on-dark" /> : <FileDown className="w-4 h-4 text-on-dark" />}
-                        {isGeneratingResume ? 'Generating...' : 'Download Resume'}
-                      </button>
-                    </div>
-                  </div>
+              {activeTab === 'resume' && (() => {
+                const totalKeywordsCount = app.extractedKeywords?.length || 0;
+                const matchedKeywordsCount = (app.extractedKeywords || []).filter(k => {
+                  const regex = new RegExp(`\\b${k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'i');
+                  return regex.test(editedResumeSnippet);
+                }).length;
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 min-h-[400px]">
-                    {/* Original Profile Context */}
-                    <div className="flex flex-col border border-hairline-light rounded-lg overflow-hidden bg-canvas">
-                      <div className="px-5 py-3 border-b border-hairline-light bg-surface-soft flex justify-between items-center">
-                        <span className="text-[10px] font-mono font-bold text-mute uppercase tracking-wider">Original Base Profile</span>
-                      </div>
-                      <div className="p-6 space-y-6 overflow-y-auto max-h-[450px]">
+                return (
+                  <div className="space-y-6 flex flex-col h-full text-left">
+                    <div className="flex justify-between items-center flex-wrap gap-4 border-b border-hairline-light pb-4">
+                      <div className="flex items-center gap-3">
+                        <Briefcase className="w-6 h-6 text-primary" />
                         <div>
-                          <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-mute mb-2">Base Summary</label>
-                          <p className="text-xs text-charcoal bg-surface-soft p-4 rounded border border-hairline-light leading-relaxed whitespace-pre-wrap">{profile.summary}</p>
+                          <h4 className="text-heading-sm font-semibold text-ink">Resume Alignment Sandbox</h4>
+                          <p className="text-xs text-mute">Compare your base summary with the AI-optimized draft and inspect keywords matching.</p>
                         </div>
-                        <div>
-                          <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-mute mb-2">Base Skills</label>
-                          <div className="flex flex-wrap gap-2">
-                            {profile.skills.map((s, idx) => (
-                              <span key={idx} className="px-2 py-1 bg-surface-soft border border-hairline-light rounded text-[10px] font-semibold text-charcoal">{s}</span>
-                            ))}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        {/* Highlighting Toggle */}
+                        <button
+                          onClick={() => setShowHighlights(!showHighlights)}
+                          className={clsx(
+                            "px-3 py-1.5 rounded text-xs font-mono font-semibold flex items-center gap-1.5 transition-all border outline-none cursor-pointer",
+                            showHighlights
+                              ? "bg-accent-teal/10 text-accent-teal border-accent-teal/20"
+                              : "bg-transparent text-mute border-hairline-light hover:text-ink"
+                          )}
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          {showHighlights ? "Highlights Active" : "Enable Highlights"}
+                        </button>
+
+                        {/* Mode Selector Tab */}
+                        <div className="flex bg-surface-soft border border-hairline-light p-0.5 rounded-lg">
+                          <button
+                            onClick={() => setResumeViewMode('visual')}
+                            className={clsx(
+                              "px-3 py-1 rounded text-xs font-semibold cursor-pointer border-none transition-all",
+                              resumeViewMode === 'visual' ? "bg-canvas text-ink shadow-xs" : "text-mute hover:text-ink"
+                            )}
+                          >
+                            Visual Preview
+                          </button>
+                          <button
+                            onClick={() => setResumeViewMode('source')}
+                            className={clsx(
+                              "px-3 py-1 rounded text-xs font-semibold cursor-pointer border-none transition-all",
+                              resumeViewMode === 'source' ? "bg-canvas text-ink shadow-xs" : "text-mute hover:text-ink"
+                            )}
+                          >
+                            Source Editor
+                          </button>
+                        </div>
+
+                        {/* Save & Download Controls */}
+                        <button
+                          onClick={handleSaveEditedResume}
+                          disabled={!isResumeDirty}
+                          className={clsx(
+                            "px-4 py-2 border rounded-md text-xs font-bold uppercase transition-colors cursor-pointer",
+                            isResumeDirty 
+                              ? "bg-primary text-on-primary border-primary hover:bg-primary-focus" 
+                              : "bg-transparent text-mute border-hairline-light cursor-not-allowed"
+                          )}
+                        >
+                          Save Edits
+                        </button>
+                        <button
+                          onClick={handleDownloadResume}
+                          disabled={isGeneratingResume}
+                          className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-focus disabled:opacity-50 text-on-primary rounded-md text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer border-none shadow-sm"
+                        >
+                          {isGeneratingResume ? <Loader2 className="w-4 h-4 animate-spin text-on-primary" /> : <FileDown className="w-4 h-4 text-on-primary" />}
+                          {isGeneratingResume ? 'Generating...' : 'Download Resume'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 min-h-[350px]">
+                      {/* Original Profile Context */}
+                      <div className="flex flex-col border border-hairline-light rounded-lg overflow-hidden bg-canvas">
+                        <div className="px-5 py-3 border-b border-hairline-light bg-surface-soft flex justify-between items-center">
+                          <span className="text-[10px] font-mono font-bold text-mute uppercase tracking-wider">Original Base Profile</span>
+                        </div>
+                        <div className="p-6 space-y-6 overflow-y-auto max-h-[380px]">
+                          <div>
+                            <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-mute mb-2">Base Summary</label>
+                            <p className="text-xs text-charcoal bg-surface-soft p-4 rounded border border-hairline-light leading-relaxed whitespace-pre-wrap min-h-[150px]">
+                              {highlightKeywords(profile.summary, app.extractedKeywords || app.tailoredSkills, showHighlights)}
+                            </p>
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-mute mb-2">Base Skills</label>
+                            <div className="flex flex-wrap gap-2">
+                              {profile.skills.map((s, idx) => (
+                                <span key={idx} className="px-2 py-1 bg-surface-soft border border-hairline-light rounded text-[10px] font-semibold text-charcoal">{s}</span>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Tailored Split Editor */}
-                    <div className="flex flex-col border border-hairline-light rounded-lg overflow-hidden bg-canvas">
-                      <div className="px-5 py-3 border-b border-hairline-light bg-surface-soft flex justify-between items-center">
-                        <span className="text-[10px] font-mono font-bold text-primary uppercase tracking-wider">Tailored Document Summary</span>
-                        {isResumeDirty && <span className="text-[9px] text-accent-warning uppercase font-mono font-bold">Unsaved changes</span>}
-                      </div>
-                      <div className="p-6 flex-1 flex flex-col gap-6 overflow-y-auto max-h-[450px]">
-                        <div className="flex-1 flex flex-col min-h-[150px]">
-                          <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-primary mb-2">Editable Tailored Summary</label>
-                          <textarea
-                            value={editedResumeSnippet}
-                            onChange={(e) => { setEditedResumeSnippet(e.target.value); setIsResumeDirty(true); }}
-                            rows={8}
-                            className="w-full flex-1 p-4 bg-canvas border border-hairline-light rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none text-xs text-ink font-mono leading-relaxed resize-none"
-                            placeholder="No summary snippet was generated."
-                          />
+                      {/* Tailored Sandbox Draft */}
+                      <div className="flex flex-col border border-hairline-light rounded-lg overflow-hidden bg-canvas">
+                        <div className="px-5 py-3 border-b border-hairline-light bg-surface-soft flex justify-between items-center">
+                          <span className="text-[10px] font-mono font-bold text-primary uppercase tracking-wider">
+                            Tailored Draft Summary {resumeViewMode === 'visual' ? '(Visual Sandbox)' : '(Source Editor)'}
+                          </span>
+                          {isResumeDirty && <span className="text-[9px] text-accent-warning uppercase font-mono font-bold">Unsaved changes</span>}
                         </div>
-                        <div>
-                          <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-primary mb-2">Tailored Target Skills</label>
-                          <div className="flex flex-wrap gap-2">
-                            {(app.tailoredSkills || app.extractedKeywords || []).map((s, idx) => (
-                              <span key={idx} className="px-2 py-1 bg-primary/5 border border-primary/20 rounded text-[10px] font-semibold text-primary">{s}</span>
-                            ))}
-                            {(app.tailoredSkills || app.extractedKeywords || []).length === 0 && (
-                              <span className="text-xs text-mute italic">No tailored skills list found.</span>
+                        <div className="p-6 flex-1 flex flex-col gap-6 overflow-y-auto max-h-[380px]">
+                          <div className="flex-1 flex flex-col min-h-[150px]">
+                            <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-primary mb-2">Editable Tailored Summary</label>
+                            
+                            {resumeViewMode === 'visual' ? (
+                              <div className="w-full flex-1 p-4 bg-primary/2.5 border border-primary/10 rounded text-xs text-ink leading-relaxed whitespace-pre-wrap min-h-[150px] overflow-y-auto font-mono">
+                                {highlightKeywords(editedResumeSnippet, app.extractedKeywords || app.tailoredSkills, showHighlights)}
+                              </div>
+                            ) : (
+                              <textarea
+                                value={editedResumeSnippet}
+                                onChange={(e) => { setEditedResumeSnippet(e.target.value); setIsResumeDirty(true); }}
+                                rows={8}
+                                className="w-full flex-1 p-4 bg-canvas border border-hairline-light rounded focus:ring-1 focus:ring-primary focus:border-primary outline-none text-xs text-ink font-mono leading-relaxed resize-none min-h-[150px]"
+                                placeholder="No summary snippet was generated."
+                              />
                             )}
                           </div>
+                          <div>
+                            <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-primary mb-2">Tailored Target Skills</label>
+                            <div className="flex flex-wrap gap-2">
+                              {(app.tailoredSkills || app.extractedKeywords || []).map((s, idx) => (
+                                <span key={idx} className="px-2 py-1 bg-primary/5 border border-primary/20 rounded text-[10px] font-semibold text-primary">{s}</span>
+                              ))}
+                              {(app.tailoredSkills || app.extractedKeywords || []).length === 0 && (
+                                <span className="text-xs text-mute italic">No tailored skills list found.</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
+
+                    {/* Comparative Keyword Analysis Dashboard */}
+                    <div className="border border-hairline-light rounded-lg bg-surface-soft p-5 space-y-3 shrink-0 text-left">
+                      <div className="flex justify-between items-center border-b border-hairline-light pb-2">
+                        <span className="text-[10px] font-mono font-bold text-ink uppercase tracking-wider">Comparative Keyword Analysis</span>
+                        <span className="text-[11px] font-semibold font-mono text-mute">
+                          Matched: <span className="text-accent-teal font-bold">{matchedKeywordsCount}</span> / {totalKeywordsCount} ({totalKeywordsCount > 0 ? Math.round((matchedKeywordsCount / totalKeywordsCount) * 100) : 0}%)
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto py-1">
+                        {(app.extractedKeywords || []).map((k, idx) => {
+                          const regex = new RegExp(`\\b${k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'i');
+                          const isMatchedTailored = regex.test(editedResumeSnippet);
+                          const isMatchedBase = regex.test(profile.summary);
+                          
+                          return (
+                            <span 
+                              key={idx} 
+                              className={clsx(
+                                "px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider font-mono flex items-center gap-1.5 border transition-all select-none",
+                                isMatchedTailored 
+                                  ? "bg-accent-teal/10 text-accent-teal border-accent-teal/20" 
+                                  : "bg-surface-card text-mute border-hairline-light"
+                              )}
+                              title={
+                                isMatchedTailored 
+                                  ? isMatchedBase 
+                                    ? "Matched in base profile summary" 
+                                    : "Newly injected by AI optimizations" 
+                                  : "Keyword missing in current draft"
+                              }
+                            >
+                              <span className={clsx("w-1.5 h-1.5 rounded-full", isMatchedTailored ? "bg-accent-teal" : "bg-mute")} />
+                              {k}
+                              {isMatchedTailored && !isMatchedBase && (
+                                <span className="text-[8px] bg-accent-teal/20 text-accent-teal px-1 rounded-sm uppercase tracking-tight scale-90 origin-left">New</span>
+                              )}
+                            </span>
+                          );
+                        })}
+                        {(app.extractedKeywords || []).length === 0 && (
+                          <span className="text-xs text-mute italic">No keywords extracted from the job description yet.</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {activeTab === 'cover' && (
                 <div className="space-y-8 flex flex-col h-full text-left">
@@ -1192,6 +1406,7 @@ function JobDetailsModal({ app, profile, onClose }: JobDetailsModalProps) {
 interface ExpandedColumnModalProps {
   column: typeof COLUMNS[number];
   apps: JobApplication[];
+  isOpen: boolean;
   onClose: () => void;
   onSelectJob: (app: JobApplication) => void;
   updateApplicationStatus: (id: string, status: ApplicationStatus) => void;
@@ -1199,7 +1414,7 @@ interface ExpandedColumnModalProps {
   onToggleSelect: (id: string) => void;
 }
 
-function ExpandedColumnModal({ column, apps, onClose, onSelectJob, updateApplicationStatus, selectedAppIds, onToggleSelect }: ExpandedColumnModalProps) {
+function ExpandedColumnModal({ column, apps, isOpen, onClose, onSelectJob, updateApplicationStatus, selectedAppIds, onToggleSelect }: ExpandedColumnModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredApps = apps.filter(app => 
@@ -1208,8 +1423,14 @@ function ExpandedColumnModal({ column, apps, onClose, onSelectJob, updateApplica
   );
 
   return createPortal(
-    <div className="fixed inset-0 z-45 flex items-center justify-center p-8 bg-canvas-dark/80 backdrop-blur-xs">
-      <div className="bg-canvas-light w-full max-w-6xl h-[85vh] rounded-xl border border-hairline-light flex flex-col overflow-hidden text-left shadow-2xl">
+    <div className={clsx(
+      "fixed inset-0 z-45 flex items-center justify-center p-8 bg-canvas-dark/80 backdrop-blur-xs transition-opacity",
+      isOpen ? "animate-modal-backdrop" : "opacity-0 transition-opacity duration-200 ease-in pointer-events-none"
+    )}>
+      <div className={clsx(
+        "bg-canvas-light w-full max-w-6xl h-[85vh] rounded-xl border border-hairline-light flex flex-col overflow-hidden text-left shadow-2xl transition-all",
+        isOpen ? "animate-modal-content" : "opacity-0 scale-96 translate-y-3 transition-all duration-200 ease-in"
+      )}>
         {/* Header */}
         <header className="px-10 py-6 border-b border-hairline-light flex justify-between items-center bg-canvas-light shrink-0">
           <div>

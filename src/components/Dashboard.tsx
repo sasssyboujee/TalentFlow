@@ -33,7 +33,7 @@ function Sparkline({ data, color = 'currentColor' }: { data: number[]; color?: s
 }
 
 export function Dashboard() {
-  const { applications, setView, emailSuggestions } = useAppState();
+  const { applications, setView, emailSuggestions, setSelectedJobId } = useAppState();
   const [hoveredDay, setHoveredDay] = useState<{ dateStr: string; date: Date; count: number } | null>(null);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
@@ -312,13 +312,13 @@ export function Dashboard() {
       }
     });
 
-    // Start from 52 weeks ago, aligned to Sunday
+    // Start from 25 weeks ago (6 months), aligned to Sunday
     const start = new Date(today);
-    start.setDate(today.getDate() - 364);
+    start.setDate(today.getDate() - 25 * 7);
     const dayOfWeek = start.getDay();
     start.setDate(start.getDate() - dayOfWeek);
 
-    const totalDays = 53 * 7;
+    const totalDays = 26 * 7;
     const days = [];
     for (let i = 0; i < totalDays; i++) {
       const d = new Date(start);
@@ -334,7 +334,7 @@ export function Dashboard() {
     const labels: { text: string; colIndex: number }[] = [];
     let lastMonth = -1;
     
-    for (let col = 0; col < 53; col++) {
+    for (let col = 0; col < 26; col++) {
       const firstDayOfWeek = heatmapData[col * 7]?.date;
       if (!firstDayOfWeek) continue;
       const currentMonth = firstDayOfWeek.getMonth();
@@ -378,7 +378,7 @@ export function Dashboard() {
   };
 
   return (
-    <div className="w-full min-h-full flex flex-col bg-canvas text-left">
+    <div className="w-full min-h-full flex flex-col bg-canvas text-left animate-in fade-in duration-300">
       
       <header className="px-12 py-10 bg-canvas border-b border-hairline-light shrink-0 text-left w-full max-w-7xl mx-auto flex items-center justify-between">
         <div>
@@ -563,11 +563,11 @@ export function Dashboard() {
                       </span>
                       <div className="flex items-baseline gap-1.5">
                         <span className="text-3xl font-bold tracking-tight text-ink font-display">
-                          {counts[stage.name]}
+                          {counts[stage.name as keyof typeof counts]}
                         </span>
-                        {velocities[stage.name] > 0 && (
+                        {velocities[stage.name as keyof typeof velocities] > 0 && (
                           <span className="text-[10px] font-bold font-mono text-emerald-600 dark:text-emerald-400 animate-fade-in">
-                            ▲+{velocities[stage.name]}
+                            ▲+{velocities[stage.name as keyof typeof velocities]}
                           </span>
                         )}
                       </div>
@@ -592,81 +592,99 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Application Activity Heatmap */}
+      {/* Recent Activity (Moved Up to be full width card) */}
       <div className="w-full px-12 mb-12">
-        <div className="max-w-7xl mx-auto bg-surface-soft border border-hairline-light rounded-lg p-8">
-          <div className="flex items-center justify-between mb-8 border-b border-hairline-light pb-4">
-            <div>
-              <h3 className="text-title-sm text-ink font-semibold uppercase tracking-wider">Application Frequency</h3>
-              <p className="text-[10px] text-mute mt-1 font-mono uppercase tracking-wide">Historical contribution calendar of sent applications</p>
-            </div>
-          </div>
-          
-          <div className="flex gap-3">
-            {/* Day labels column */}
-            <div className="grid grid-rows-7 text-[9px] text-mute font-mono uppercase tracking-wider select-none pr-1 justify-items-end items-center" style={{ height: '95px', rowGap: '3px', marginTop: '19px' }}>
-              <span></span>
-              <span>Mon</span>
-              <span></span>
-              <span>Wed</span>
-              <span></span>
-              <span>Fri</span>
-              <span></span>
-            </div>
-               {/* Heatmap Grid container */}
-            <div className="flex-1 overflow-x-auto pb-2 scrollbar-none">
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(53, 11px)', gridTemplateRows: '16px repeat(7, 11px)', gap: '3px', width: 'max-content' }}>
-                {/* Month labels */}
-                {monthLabels.map((lbl, idx) => (
-                  <span 
-                    key={idx} 
-                    className="text-[9px] text-mute font-mono uppercase tracking-wider select-none"
-                    style={{ gridColumn: `${lbl.colIndex + 1} / span 3`, gridRow: 1, whiteSpace: 'nowrap', minWidth: 0 }}
-                  >
-                    {lbl.text}
+        <div className="max-w-7xl mx-auto bg-surface-soft border border-hairline-light rounded-lg p-8 flex flex-col justify-between animate-fade-in text-left">
+          <div>
+            <div className="flex items-center justify-between mb-8 border-b border-hairline-light pb-4">
+              <div className="flex items-center gap-3">
+                <h3 className="text-title-sm text-ink font-semibold uppercase tracking-wider">Recent Activity</h3>
+                {selectedNode && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase bg-primary text-on-primary border border-primary animate-fade-in shadow-sm">
+                    Filter: {selectedNode} (Locked)
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedNode(null);
+                      }}
+                      className="ml-1 text-[10px] font-bold hover:text-red-300 border-none bg-transparent cursor-pointer"
+                    >
+                      ×
+                    </button>
                   </span>
-                ))}
-                
-                {/* Cells grid */}
-                {heatmapData.map((day, idx) => {
-                  const col = Math.floor(idx / 7);
-                  const row = idx % 7;
-                  const colorClass = getHeatmapColorClass(day.count);
-                  return (
-                    <div
-                      key={idx}
-                      className={clsx("w-[11px] h-[11px] rounded-[1.5px] transition-all cursor-pointer hover:scale-110", colorClass)}
-                      style={{ gridColumn: col + 1, gridRow: row + 2 }}
-                      title={`${day.count} job${day.count === 1 ? '' : 's'} applied on ${day.dateStr}`}
-                      onMouseEnter={() => setHoveredDay(day)}
-                      onMouseLeave={() => setHoveredDay(null)}
-                    />
-                  );
-                })}
+                )}
+                {!selectedNode && hoveredNode && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase bg-primary/10 text-primary border border-primary/20 animate-fade-in shadow-sm">
+                    Filter: {hoveredNode}
+                  </span>
+                )}
               </div>
+              <button 
+                onClick={() => setView('tracker')}
+                className="text-xs font-semibold text-ink underline hover:text-primary-active bg-transparent border-none cursor-pointer"
+              >
+                View Tracker &rarr;
+              </button>
             </div>
-          </div>
 
-          <div className="flex justify-between items-center mt-3 text-[10px] text-mute font-mono">
-            <div>
-              {hoveredDay ? (
-                <span className="text-ink font-semibold animate-fade-in">
-                  {hoveredDay.count} job{hoveredDay.count === 1 ? '' : 's'} applied on{' '}
-                  {hoveredDay.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                </span>
-              ) : (
-                <span>Hover over the cells to view application history</span>
+            <div className="divide-y divide-hairline-light">
+              {filteredRecentApps.slice(0, 5).map(app => {
+                const companyInitial = app.company ? app.company.charAt(0).toUpperCase() : 'J';
+                const matchScore = app.matchScore || 75;
+                
+                return (
+                  <button 
+                    key={app.id} 
+                    onClick={() => {
+                      setSelectedJobId(app.id);
+                      setView('tracker');
+                    }}
+                    className="w-full flex items-center justify-between py-4 px-3 -mx-3 hover:bg-surface-soft/60 rounded-lg text-xs animate-fade-in cursor-pointer border-none text-left bg-transparent outline-none transition-all"
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      {/* Company placeholder badge */}
+                      <div className="w-10 h-10 bg-canvas-light border border-hairline-light rounded-lg flex items-center justify-center font-bold text-ink shrink-0 text-sm">
+                        {companyInitial}
+                      </div>
+                      <div className="min-w-0">
+                        <span className="block text-sm font-semibold text-ink truncate">{app.role}</span>
+                        <span className="block text-xs text-mute mt-0.5 truncate">{app.company}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 shrink-0">
+                      {app.emailVerified && (
+                        <div className="px-2.5 py-1 rounded-md border text-[10px] font-bold uppercase tracking-wider font-mono bg-accent-teal/10 text-accent-teal border-accent-teal/20">
+                          ✓ Synced
+                        </div>
+                      )}
+                      {app.matchScore !== undefined && (
+                        <div className={clsx(
+                          "px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider font-mono",
+                          matchScore >= 80 
+                            ? "bg-accent-teal/10 text-accent-teal border-accent-teal/20"
+                            : "bg-accent-warning/10 text-accent-warning border-accent-warning/20"
+                        )}>
+                          {matchScore}% Match
+                        </div>
+                      )}
+                      <span className={clsx(
+                        "px-3 py-1 rounded-md border text-[10px] font-bold uppercase tracking-wider",
+                        getStatusPillColor(app.status)
+                      )}>
+                        {app.status}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+              {filteredRecentApps.length === 0 && (
+                <div className="text-center py-12 text-mute text-xs animate-fade-in">
+                  {selectedNode || hoveredNode 
+                    ? `No recent activity in the "${selectedNode || hoveredNode}" stage.` 
+                    : "No active applications currently logged."}
+                </div>
               )}
-            </div>
-            
-            <div className="flex items-center gap-1.5 select-none">
-              <span>Less</span>
-              <div className="w-2.5 h-2.5 rounded-[1px] bg-[#ebedf0] dark:bg-[#161b22] border border-[#d0d7de]/10 dark:border-[#30363d]/10" />
-              <div className="w-2.5 h-2.5 rounded-[1px] bg-[#9be9a8] dark:bg-[#0e4429]" />
-              <div className="w-2.5 h-2.5 rounded-[1px] bg-[#40c463] dark:bg-[#006d32]" />
-              <div className="w-2.5 h-2.5 rounded-[1px] bg-[#30a14e] dark:bg-[#26a641]" />
-              <div className="w-2.5 h-2.5 rounded-[1px] bg-[#216e39] dark:bg-[#39d353]" />
-              <span>More</span>
             </div>
           </div>
         </div>
@@ -676,91 +694,82 @@ export function Dashboard() {
       <div className="w-full px-12 pb-24">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto items-stretch">
           
-          {/* Left Card: Recent Activity (Light Card) */}
-          <div className="lg:col-span-7 bg-surface-soft border border-hairline-light rounded-lg p-8 flex flex-col justify-between animate-fade-in">
+          {/* Left Card: Application Activity Heatmap (Moved Here to be side-by-side with Resource Monitor) */}
+          <div className="lg:col-span-7 bg-surface-soft border border-hairline-light rounded-lg p-8 flex flex-col justify-between animate-fade-in text-left">
             <div>
               <div className="flex items-center justify-between mb-8 border-b border-hairline-light pb-4">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-title-sm text-ink font-semibold uppercase tracking-wider">Recent Activity</h3>
-                  {selectedNode && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase bg-primary text-on-primary border border-primary animate-fade-in shadow-sm">
-                      Filter: {selectedNode} (Locked)
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedNode(null);
-                        }}
-                        className="ml-1 text-[10px] font-bold hover:text-red-300 border-none bg-transparent cursor-pointer"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  )}
-                  {!selectedNode && hoveredNode && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase bg-primary/10 text-primary border border-primary/20 animate-fade-in shadow-sm">
-                      Filter: {hoveredNode}
-                    </span>
-                  )}
+                <div>
+                  <h3 className="text-title-sm text-ink font-semibold uppercase tracking-wider">Application Frequency</h3>
+                  <p className="text-[10px] text-mute mt-1 font-mono uppercase tracking-wide">Historical contribution calendar of sent applications</p>
                 </div>
-                <button 
-                  onClick={() => setView('tracker')}
-                  className="text-xs font-semibold text-ink underline hover:text-primary-active bg-transparent border-none cursor-pointer"
-                >
-                  View Tracker &rarr;
-                </button>
+              </div>
+              
+              <div className="flex gap-3">
+                {/* Day labels column */}
+                <div className="grid grid-rows-7 text-[9px] text-mute font-mono uppercase tracking-wider select-none pr-1 justify-items-end items-center" style={{ height: '95px', rowGap: '3px', marginTop: '19px' }}>
+                  <span></span>
+                  <span>Mon</span>
+                  <span></span>
+                  <span>Wed</span>
+                  <span></span>
+                  <span>Fri</span>
+                  <span></span>
+                </div>
+                {/* Heatmap Grid container */}
+                <div className="flex-1 overflow-x-auto pb-2 scrollbar-none">
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(26, 11px)', gridTemplateRows: '16px repeat(7, 11px)', gap: '3px', width: 'max-content' }}>
+                    {/* Month labels */}
+                    {monthLabels.map((lbl, idx) => (
+                      <span 
+                        key={idx} 
+                        className="text-[9px] text-mute font-mono uppercase tracking-wider select-none"
+                        style={{ gridColumn: `${lbl.colIndex + 1} / span 3`, gridRow: 1, whiteSpace: 'nowrap', minWidth: 0 }}
+                      >
+                        {lbl.text}
+                      </span>
+                    ))}
+                    
+                    {/* Cells grid */}
+                    {heatmapData.map((day, idx) => {
+                      const col = Math.floor(idx / 7);
+                      const row = idx % 7;
+                      const colorClass = getHeatmapColorClass(day.count);
+                      return (
+                        <div
+                          key={idx}
+                          className={clsx("w-[11px] h-[11px] rounded-[1.5px] transition-all cursor-pointer hover:scale-110", colorClass)}
+                          style={{ gridColumn: col + 1, gridRow: row + 2 }}
+                          title={`${day.count} job${day.count === 1 ? '' : 's'} applied on ${day.dateStr}`}
+                          onMouseEnter={() => setHoveredDay(day)}
+                          onMouseLeave={() => setHoveredDay(null)}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
-              <div className="divide-y divide-hairline-light">
-                {filteredRecentApps.slice(0, 5).map(app => {
-                  const companyInitial = app.company ? app.company.charAt(0).toUpperCase() : 'J';
-                  const matchScore = app.matchScore || 75;
-                  
-                  return (
-                    <div key={app.id} className="flex items-center justify-between py-5 text-xs animate-fade-in">
-                      <div className="flex items-center gap-4 min-w-0">
-                        {/* Company placeholder badge */}
-                        <div className="w-10 h-10 bg-canvas-light border border-hairline-light rounded-lg flex items-center justify-center font-bold text-ink shrink-0 text-sm">
-                          {companyInitial}
-                        </div>
-                        <div className="min-w-0">
-                          <span className="block text-sm font-semibold text-ink truncate">{app.role}</span>
-                          <span className="block text-xs text-mute mt-0.5 truncate">{app.company}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-4 shrink-0">
-                        {app.emailVerified && (
-                          <div className="px-2.5 py-1 rounded-md border text-[10px] font-bold uppercase tracking-wider font-mono bg-accent-teal/10 text-accent-teal border-accent-teal/20">
-                            ✓ Synced
-                          </div>
-                        )}
-                        {app.matchScore !== undefined && (
-                          <div className={clsx(
-                            "px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider font-mono",
-                            matchScore >= 80 
-                              ? "bg-accent-teal/10 text-accent-teal border-accent-teal/20"
-                              : "bg-accent-warning/10 text-accent-warning border-accent-warning/20"
-                          )}>
-                            {matchScore}% Match
-                          </div>
-                        )}
-                        <span className={clsx(
-                          "px-3 py-1 rounded-md border text-[10px] font-bold uppercase tracking-wider",
-                          getStatusPillColor(app.status)
-                        )}>
-                          {app.status}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-                {filteredRecentApps.length === 0 && (
-                  <div className="text-center py-12 text-mute text-xs animate-fade-in">
-                    {selectedNode || hoveredNode 
-                      ? `No recent activity in the "${selectedNode || hoveredNode}" stage.` 
-                      : "No active applications currently logged."}
-                  </div>
-                )}
+              <div className="flex justify-between items-center mt-3 text-[10px] text-mute font-mono">
+                <div>
+                  {hoveredDay ? (
+                    <span className="text-ink font-semibold animate-fade-in">
+                      {hoveredDay.count} job{hoveredDay.count === 1 ? '' : 's'} applied on{' '}
+                      {hoveredDay.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  ) : (
+                    <span>Hover over the cells to view application history</span>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-1.5 select-none">
+                  <span>Less</span>
+                  <div className="w-2.5 h-2.5 rounded-[1px] bg-[#ebedf0] dark:bg-[#161b22] border border-[#d0d7de]/10 dark:border-[#30363d]/10" />
+                  <div className="w-2.5 h-2.5 rounded-[1px] bg-[#9be9a8] dark:bg-[#0e4429]" />
+                  <div className="w-2.5 h-2.5 rounded-[1px] bg-[#40c463] dark:bg-[#006d32]" />
+                  <div className="w-2.5 h-2.5 rounded-[1px] bg-[#30a14e] dark:bg-[#26a641]" />
+                  <div className="w-2.5 h-2.5 rounded-[1px] bg-[#216e39] dark:bg-[#39d353]" />
+                  <span>More</span>
+                </div>
               </div>
             </div>
           </div>
