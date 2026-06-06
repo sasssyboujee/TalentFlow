@@ -10,7 +10,7 @@ export function Sidebar() {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'tracker', label: 'Job Tracker', icon: ListTodo },
-    { id: 'runner', label: 'Agent Runner', icon: Bot },
+    { id: 'runner', label: 'FlowBot', icon: Bot },
     { id: 'email-scan', label: 'AI Email Sync', icon: Mail },
     { id: 'calendar', label: 'Interview Schedule', icon: Calendar },
     { id: 'linkedin', label: 'LinkedIn Optimizer', icon: Compass },

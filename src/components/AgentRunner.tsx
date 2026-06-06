@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppState } from '../state';
-import { Terminal, Globe, FileText, Cpu, FileCheck, CheckCircle2, Loader2, Link2, X, Search } from 'lucide-react';
+import { Terminal, Globe, FileText, Cpu, FileCheck, CheckCircle2, Loader2, Link2, X, Search, Bot } from 'lucide-react';
 import clsx from 'clsx';
 import type { AgentLog } from '../types';
 import { analyzeJobMatch, discoverJobs } from '../lib/gemini';
@@ -114,6 +114,32 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
   const setCurrentStep = (val: number) => setRunnerState(prev => ({ ...prev, currentStep: val }));
 
   const [autoSelectProjects, setAutoSelectProjects] = useState(!!settings.autoSelectProjects);
+  const [showConsole, setShowConsole] = useState(false);
+
+  const [tokenStats, setTokenStats] = useState<any>(() => {
+    try {
+      const saved = localStorage.getItem('agent_token_stats');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      lastRun: { prompt: 0, completion: 0, total: 0 },
+      lifetime: { prompt: 0, completion: 0, total: 0 },
+      byFeature: {}
+    };
+  });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      try {
+        const saved = localStorage.getItem('agent_token_stats');
+        if (saved) {
+          setTokenStats(JSON.parse(saved));
+        }
+      } catch (e) {}
+    };
+    window.addEventListener('token_stats_updated', handleUpdate);
+    return () => window.removeEventListener('token_stats_updated', handleUpdate);
+  }, []);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const processedPrefillRef = useRef<string | null>(null);
 
@@ -176,6 +202,9 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
   ];
 
   const pushLog = (msg: string, type: AgentLog['type'] = 'info') => {
+    if (type === 'error') {
+      setShowConsole(true);
+    }
     setLogs(prev => [...prev, {
       id: Math.random().toString(),
       timestamp: new Date().toLocaleTimeString(),
@@ -183,6 +212,33 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
       type
     }]);
   };
+
+  const getBotState = (): 'idle' | 'running' | 'success' | 'error' => {
+    if (isRunning) return 'running';
+    if (logs.some(l => l.type === 'error')) return 'error';
+    if (logs.length > 0 && currentStep === 3) return 'success';
+    return 'idle';
+  };
+
+  const botState = getBotState();
+
+  const getBotStatusText = () => {
+    switch (botState) {
+      case 'running':
+        if (currentStep === 0) return { title: 'Initializing Agent', desc: 'Setting up scraper pipeline and checking duplicates...' };
+        if (currentStep === 1) return { title: 'Retrieving Opportunity', desc: 'Fetching job description and bypassing rate limits...' };
+        if (currentStep === 2) return { title: 'Analyzing with LLM', desc: 'Analyzing keywords, scoring fit, and tailoring assets...' };
+        return { title: 'Finalizing Storage', desc: 'Writing tailored resume, cover letter, and questions to cache...' };
+      case 'success':
+        return { title: 'Deployment Complete', desc: 'Opportunities successfully matching your profile have been saved!' };
+      case 'error':
+        return { title: 'Agent Terminated', desc: 'An error occurred during execution. Inspect the terminal log for details.' };
+      default:
+        return { title: 'Agent Offline', desc: 'Ready for deployment. Enter a JD source and click Deploy FlowBot.' };
+    }
+  };
+
+  const statusInfo = getBotStatusText();
 
   useEffect(() => {
     if (logsEndRef.current) {
@@ -209,6 +265,18 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
     if (targetInputMode === 'discover' && (!targetTitle || !location)) return;
 
     if (runningRef.current) return;
+    
+    // Reset last run token stats
+    try {
+      const savedStr = localStorage.getItem('agent_token_stats');
+      const stats = savedStr ? JSON.parse(savedStr) : null;
+      if (stats) {
+        stats.lastRun = { prompt: 0, completion: 0, total: 0 };
+        localStorage.setItem('agent_token_stats', JSON.stringify(stats));
+        window.dispatchEvent(new CustomEvent('token_stats_updated'));
+      }
+    } catch (e) {}
+
     setRunning(true);
     setLogs([]);
     setCurrentStep(0);
@@ -471,28 +539,28 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
   const layoutContent = (
     <div className="flex flex-col lg:flex-row w-full flex-1 min-h-0 border-t border-hairline-light min-w-0">
       {/* Left Column: Form & Steps */}
-      <div className="flex-1 p-12 lg:border-r border-b lg:border-b-0 border-hairline-light flex flex-col gap-12 bg-canvas-light text-left overflow-y-auto min-w-0">
+      <div className="flex-1 p-10 lg:p-12 lg:border-r border-b lg:border-b-0 border-hairline-light flex flex-col gap-12 bg-canvas-light text-left overflow-y-auto min-w-0">
         <div className="w-full max-w-2xl">
           {/* Tab Selector */}
-          <div className="flex bg-surface-soft p-1 rounded-md border border-hairline-light mb-8 max-w-md">
+          <div className="flex bg-surface-soft p-1 rounded-xl border border-hairline-light mb-8 max-w-md shadow-xs">
             <button
               type="button"
               onClick={() => { setInputMode('url'); setDiscoveredJobs([]); }}
-              className={clsx("flex-1 py-2 text-xs font-semibold rounded-md transition-all border-none cursor-pointer outline-none", inputMode === 'url' ? "bg-canvas-light text-ink shadow-product font-bold" : "text-mute hover:text-ink bg-transparent")}
+              className={clsx("flex-1 py-2 text-xs font-bold rounded-lg transition-all border-none cursor-pointer outline-none", inputMode === 'url' ? "bg-canvas text-ink shadow-sm" : "text-mute hover:text-ink bg-transparent")}
             >
               <Link2 className="w-4 h-4 inline-block mr-1.5 align-text-bottom" /> Scrape URL
             </button>
             <button
               type="button"
               onClick={() => { setInputMode('text'); setDiscoveredJobs([]); }}
-              className={clsx("flex-1 py-2 text-xs font-semibold rounded-md transition-all border-none cursor-pointer outline-none", inputMode === 'text' ? "bg-canvas-light text-ink shadow-product font-bold" : "text-mute hover:text-ink bg-transparent")}
+              className={clsx("flex-1 py-2 text-xs font-bold rounded-lg transition-all border-none cursor-pointer outline-none", inputMode === 'text' ? "bg-canvas text-ink shadow-sm" : "text-mute hover:text-ink bg-transparent")}
             >
               <FileText className="w-4 h-4 inline-block mr-1.5 align-text-bottom" /> Paste JD
             </button>
             <button
               type="button"
               onClick={() => { setInputMode('discover'); setDiscoveredJobs([]); }}
-              className={clsx("flex-1 py-2 text-xs font-semibold rounded-md transition-all border-none cursor-pointer outline-none", inputMode === 'discover' ? "bg-canvas-light text-ink shadow-product font-bold" : "text-mute hover:text-ink bg-transparent")}
+              className={clsx("flex-1 py-2 text-xs font-bold rounded-lg transition-all border-none cursor-pointer outline-none", inputMode === 'discover' ? "bg-canvas text-ink shadow-sm" : "text-mute hover:text-ink bg-transparent")}
             >
               <Search className="w-4 h-4 inline-block mr-1.5 align-text-bottom" /> Discover Jobs
             </button>
@@ -559,183 +627,203 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
             </div>
           ) : (
             /* Search & scrape forms */
-            <form onSubmit={handleRunAgent}>
-              {inputMode === 'url' && (
-                <div className="mb-8">
-                  <label className="block text-xs font-semibold text-mute uppercase tracking-wider mb-3">Target Job URL</label>
-                  <input
-                    type="url"
-                    required
-                    placeholder="https://company.com/jobs/..."
-                    value={url}
-                    onChange={e => setUrl(e.target.value)}
-                    disabled={isRunning}
-                    className="w-full px-4 py-2.5 bg-canvas-light border border-hairline-light rounded-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all disabled:opacity-50 text-ink placeholder:text-stone h-10 text-sm"
-                  />
-                  <p className="mt-3 text-xs text-mute font-mono">Note: If scraping fails due to anti-bot protection, use "Paste JD" instead.</p>
-                </div>
-              )}
-
-              {inputMode === 'text' && (
-                <div className="mb-8 space-y-6">
-                  <div>
-                    <label className="block text-xs font-semibold text-mute uppercase tracking-wider mb-3">Job URL (Optional)</label>
+            <form onSubmit={handleRunAgent} className="space-y-6">
+              <div className="bg-surface-soft border border-hairline-light rounded-2xl p-6 md:p-8 space-y-6 shadow-xs">
+                {inputMode === 'url' && (
+                  <div className="space-y-3">
+                    <label className="block text-[11px] font-bold text-mute uppercase tracking-wider">Target Job URL</label>
                     <input
                       type="url"
+                      required
                       placeholder="https://company.com/jobs/..."
                       value={url}
                       onChange={e => setUrl(e.target.value)}
                       disabled={isRunning}
-                      className="w-full px-4 py-2.5 bg-canvas-light border border-hairline-light rounded-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all disabled:opacity-50 text-ink placeholder:text-stone h-10 text-sm"
+                      className="w-full px-4 py-3 bg-canvas border border-hairline-light rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all disabled:opacity-50 text-ink placeholder:text-stone/50 text-sm shadow-xs"
                     />
+                    <p className="text-xs text-mute font-mono leading-relaxed">Note: If scraping fails due to anti-bot protection, use "Paste JD" instead.</p>
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-mute uppercase tracking-wider mb-3">Raw Job Description</label>
-                    <textarea
-                      required
-                      rows={8}
-                      placeholder="Paste the full text of the job description here..."
-                      value={jdText}
-                      onChange={e => setJdText(e.target.value)}
-                      disabled={isRunning}
-                      className="w-full px-4 py-2.5 bg-canvas-light border border-hairline-light rounded-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all disabled:opacity-50 resize-none text-ink placeholder:text-stone text-sm"
-                    />
-                  </div>
-                </div>
-              )}
+                )}
 
-              {inputMode === 'discover' && (
-                <div className="space-y-6 mb-8">
-                  <div>
-                    <label className="block text-xs font-semibold text-mute uppercase tracking-wider mb-2">Target Job Title</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Frontend Developer"
-                      value={targetTitle}
-                      onChange={e => setTargetTitle(e.target.value)}
-                      disabled={isRunning}
-                      className="w-full px-4 py-2.5 bg-canvas-light border border-hairline-light rounded-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all disabled:opacity-50 text-ink placeholder:text-stone h-10 text-sm"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-mute uppercase tracking-wider mb-2">Job Type</label>
-                      <select
-                        value={jobType}
-                        onChange={e => setJobType(e.target.value)}
+                {inputMode === 'text' && (
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <label className="block text-[11px] font-bold text-mute uppercase tracking-wider">Job URL (Optional)</label>
+                      <input
+                        type="url"
+                        placeholder="https://company.com/jobs/..."
+                        value={url}
+                        onChange={e => setUrl(e.target.value)}
                         disabled={isRunning}
-                        className="w-full px-4 py-2.5 bg-canvas-light border border-hairline-light rounded-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all disabled:opacity-50 text-ink h-10 text-sm cursor-pointer"
-                      >
-                        <option value="full-time">Full-Time</option>
-                        <option value="part-time">Part-Time</option>
-                        <option value="contract">Contract</option>
-                        <option value="internship">Internship</option>
-                      </select>
+                        className="w-full px-4 py-3 bg-canvas border border-hairline-light rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all disabled:opacity-50 text-ink placeholder:text-stone/50 text-sm shadow-xs"
+                      />
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-mute uppercase tracking-wider mb-2">Work Mode</label>
-                      <select
-                        value={workMode}
-                        onChange={e => setWorkMode(e.target.value)}
+                    <div className="space-y-3">
+                      <label className="block text-[11px] font-bold text-mute uppercase tracking-wider">Raw Job Description</label>
+                      <textarea
+                        required
+                        rows={8}
+                        placeholder="Paste the full text of the job description here..."
+                        value={jdText}
+                        onChange={e => setJdText(e.target.value)}
                         disabled={isRunning}
-                        className="w-full px-4 py-2.5 bg-canvas-light border border-hairline-light rounded-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all disabled:opacity-50 text-ink h-10 text-sm cursor-pointer"
-                      >
-                        <option value="all">All Modes</option>
-                        <option value="remote">Remote</option>
-                        <option value="hybrid">Hybrid</option>
-                        <option value="on-site">On-Site</option>
-                      </select>
+                        className="w-full px-4 py-3 bg-canvas border border-hairline-light rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all disabled:opacity-50 resize-none text-ink placeholder:text-stone/50 text-sm shadow-xs"
+                      />
                     </div>
                   </div>
+                )}
 
-                  <div>
-                    <label className="block text-xs font-semibold text-mute uppercase tracking-wider mb-2">Preferred Location</label>
+                {inputMode === 'discover' && (
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <label className="block text-[11px] font-bold text-mute uppercase tracking-wider">Target Job Title</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Frontend Developer"
+                        value={targetTitle}
+                        onChange={e => setTargetTitle(e.target.value)}
+                        disabled={isRunning}
+                        className="w-full px-4 py-3 bg-canvas border border-hairline-light rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all disabled:opacity-50 text-ink placeholder:text-stone/50 text-sm shadow-xs"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <label className="block text-[11px] font-bold text-mute uppercase tracking-wider">Job Type</label>
+                        <select
+                          value={jobType}
+                          onChange={e => setJobType(e.target.value)}
+                          disabled={isRunning}
+                          className="w-full px-4 py-3 bg-canvas border border-hairline-light rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all disabled:opacity-50 text-ink text-sm cursor-pointer shadow-xs"
+                        >
+                          <option value="full-time">Full-Time</option>
+                          <option value="part-time">Part-Time</option>
+                          <option value="contract">Contract</option>
+                          <option value="internship">Internship</option>
+                        </select>
+                      </div>
+                      <div className="space-y-3">
+                        <label className="block text-[11px] font-bold text-mute uppercase tracking-wider">Work Mode</label>
+                        <select
+                          value={workMode}
+                          onChange={e => setWorkMode(e.target.value)}
+                          disabled={isRunning}
+                          className="w-full px-4 py-3 bg-canvas border border-hairline-light rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all disabled:opacity-50 text-ink text-sm cursor-pointer shadow-xs"
+                        >
+                          <option value="all">All Modes</option>
+                          <option value="remote">Remote</option>
+                          <option value="hybrid">Hybrid</option>
+                          <option value="on-site">On-Site</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="block text-[11px] font-bold text-mute uppercase tracking-wider">Preferred Location</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. San Francisco, CA"
+                        value={location}
+                        onChange={e => setLocation(e.target.value)}
+                        disabled={isRunning}
+                        className="w-full px-4 py-3 bg-canvas border border-hairline-light rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all disabled:opacity-50 text-ink placeholder:text-stone/50 text-sm shadow-xs"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {inputMode !== 'discover' && (
+                  <div className="flex items-start gap-3.5 p-4 bg-canvas border border-hairline-light rounded-xl hover:border-hairline-strong/20 hover:bg-surface-soft/40 transition-all duration-300 cursor-pointer select-none">
                     <input
-                      type="text"
-                      required
-                      placeholder="e.g. San Francisco, CA"
-                      value={location}
-                      onChange={e => setLocation(e.target.value)}
+                      type="checkbox"
+                      id="autoSelectProjects"
+                      checked={autoSelectProjects}
+                      onChange={(e) => setAutoSelectProjects(e.target.checked)}
                       disabled={isRunning}
-                      className="w-full px-4 py-2.5 bg-canvas-light border border-hairline-light rounded-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all disabled:opacity-50 text-ink placeholder:text-stone h-10 text-sm"
+                      className="mt-0.5 accent-primary cursor-pointer w-4 h-4 rounded"
                     />
+                    <div>
+                      <label htmlFor="autoSelectProjects" className="text-xs font-bold text-ink block cursor-pointer">Auto-select relevant projects</label>
+                      <span className="text-[10px] text-mute mt-1 block leading-normal">Filter and display only the most matching projects on the tailored resume.</span>
+                    </div>
                   </div>
-                </div>
-              )}
-
-              {inputMode !== 'discover' && (
-                <div className="mb-6 flex items-start gap-3 p-4 border border-hairline-light rounded-lg hover:bg-surface-soft transition-colors cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    id="autoSelectProjects"
-                    checked={autoSelectProjects}
-                    onChange={(e) => setAutoSelectProjects(e.target.checked)}
-                    disabled={isRunning}
-                    className="mt-0.5 accent-primary cursor-pointer"
-                  />
-                  <div>
-                    <label htmlFor="autoSelectProjects" className="text-xs font-bold text-ink block cursor-pointer">Auto-select relevant projects</label>
-                    <span className="text-[10px] text-mute mt-0.5 block">Filter and display only the most matching projects on the tailored resume.</span>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
 
               <button
                 type="submit"
                 disabled={isRunning || (inputMode === 'url' ? !url : inputMode === 'text' ? !jdText : !targetTitle || !location)}
-                className="w-full bg-primary hover:bg-primary-active disabled:opacity-50 text-on-primary px-5 py-2.5 rounded-md font-semibold transition-all flex items-center justify-center gap-2 text-sm uppercase cursor-pointer h-10 border-none shadow-product"
+                className="w-full bg-primary hover:bg-primary-focus disabled:opacity-50 text-on-primary px-6 py-3.5 rounded-xl font-bold tracking-wide transition-all duration-300 flex items-center justify-center gap-2.5 text-xs uppercase cursor-pointer shadow-md hover:scale-[1.01] active:scale-[0.99] border-none"
               >
-                {isRunning ? <Loader2 className="w-4 h-4 animate-spin text-current" /> : <Terminal className="w-4 h-4 text-current" />}
-                {isRunning ? 'Running...' : 'Deploy Scraper Agent'}
+                {isRunning ? <Loader2 className="w-4 h-4 animate-spin text-current" /> : <Bot className="w-4 h-4 text-current" />}
+                {isRunning ? 'Running FlowBot...' : 'Deploy FlowBot'}
               </button>
             </form>
           )}
         </div>
 
         <div className="w-full max-w-2xl pt-12 border-t border-hairline-light">
-          <h3 className="text-display-md text-ink mb-10 font-semibold uppercase">Pipeline Status</h3>
-          <div className="flex flex-col gap-4 w-full">
+          <div className="flex items-center gap-3 mb-8">
+            <Cpu className="w-5 h-5 text-primary" />
+            <h3 className="text-heading-md text-ink font-semibold uppercase tracking-tight">Pipeline Status</h3>
+          </div>
+          <div className="flex flex-col gap-3.5 w-full">
             {steps.map((step, idx) => {
               const Icon = step.icon;
               const status = idx < currentStep ? 'complete' : idx === currentStep && isRunning ? 'active' : 'pending';
               
               return (
-                <div key={step.id} className="relative h-12 w-full bg-surface-soft rounded-lg overflow-hidden group">
+                <div 
+                  key={step.id} 
+                  className={clsx(
+                    "relative flex items-center justify-between px-5 py-4 bg-canvas border rounded-2xl overflow-hidden group shadow-sm transition-all duration-300",
+                    status === 'active' ? "border-accent-blue-link/30 ring-1 ring-accent-blue-link/10 bg-surface-soft" : 
+                    status === 'complete' ? "border-accent-teal/20 animate-fade-in" : "border-hairline-light"
+                  )}
+                >
+                  {/* Vertical indicator bar */}
                   <div 
                     className={clsx(
-                      "absolute top-0 bottom-0 left-0 transition-all duration-1000 ease-in-out border-l-4",
-                      status === 'complete' ? "bg-primary/10 border-primary w-full" :
-                      status === 'active' ? "bg-primary/20 border-primary shadow-[0_0_15px_rgba(var(--color-primary),0.3)] w-full" :
-                      "bg-transparent border-transparent w-0"
+                      "absolute top-0 bottom-0 left-0 w-1 transition-all duration-500",
+                      status === 'complete' ? "bg-accent-teal" :
+                      status === 'active' ? "bg-accent-blue-link animate-pulse" :
+                      "bg-transparent"
                     )}
-                    style={{ 
-                      transform: status === 'active' ? 'scaleX(1)' : status === 'complete' ? 'scaleX(1)' : 'scaleX(0)',
-                      transformOrigin: 'left'
-                    }}
                   />
-                  {status === 'active' && (
-                     <div className="absolute top-0 bottom-0 left-0 w-full bg-gradient-to-r from-transparent via-primary/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
-                  )}
-                  <div className="absolute inset-0 flex items-center px-4 gap-3 z-10">
+                  
+                  <div className="flex items-center gap-4 z-10">
                     <div className={clsx(
-                      "w-6 h-6 rounded-md flex items-center justify-center shrink-0 transition-colors",
-                      status === 'complete' ? "text-primary bg-primary/10" :
-                      status === 'active' ? "text-primary bg-primary/20" :
-                      "text-stone bg-canvas-dark/5"
+                      "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300",
+                      status === 'complete' ? "text-accent-teal bg-accent-teal/10 shadow-xs" :
+                      status === 'active' ? "text-accent-blue-link bg-accent-blue-link/10 shadow-xs animate-pulse" :
+                      "text-mute bg-surface-soft border border-hairline-light/50"
                     )}>
-                      {status === 'active' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Icon className="w-3.5 h-3.5" />}
+                      {status === 'active' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}
                     </div>
+                    <div>
+                      <span className={clsx(
+                        "text-xs font-bold uppercase tracking-wider font-sans block",
+                        status === 'pending' ? "text-mute" : "text-ink"
+                      )}>
+                        {step.label}
+                      </span>
+                      <span className="text-[10px] text-mute font-mono block mt-0.5 uppercase tracking-wide">
+                        Step 0{idx + 1}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="z-10 flex items-center gap-2">
                     <span className={clsx(
-                      "text-xs font-semibold uppercase tracking-wider font-sans",
-                      status === 'pending' ? "text-stone" : "text-ink"
+                      "text-[9px] font-bold font-mono uppercase px-2 py-0.5 rounded-full",
+                      status === 'complete' ? "bg-accent-teal/10 text-accent-teal" :
+                      status === 'active' ? "bg-accent-blue-link/10 text-accent-blue-link" :
+                      "bg-surface-soft text-mute border border-hairline-light/50"
                     )}>
-                      {step.label}
+                      {status === 'complete' ? 'Done' : status === 'active' ? 'Active' : 'Queued'}
                     </span>
-                    <div className="ml-auto text-[10px] text-mute font-mono uppercase">
-                      {status === 'complete' ? 'Done' : status === 'active' ? 'In Progress' : 'Waiting'}
-                    </div>
                   </div>
                 </div>
               );
@@ -744,35 +832,284 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
         </div>
       </div>
 
-      {/* Right Column: Terminal Logs (Dark Tile) */}
-      <div className="flex-1 bg-surface-dark flex flex-col text-on-dark min-h-[500px] min-w-0 text-left">
-        <div className="px-8 py-6 border-b border-surface-dark-elevated flex items-center gap-3 shrink-0">
-          <Terminal className="w-5 h-5 text-on-dark-soft" />
-          <span className="text-sm font-mono text-on-dark-soft tracking-widest uppercase">agent-console</span>
+      {/* Right Column: Interactive Monitor Panel */}
+      <div className="flex-1 bg-surface-soft flex flex-col text-ink border-l border-hairline-light min-h-[500px] min-w-0 text-left">
+        {/* Monitor Header */}
+        <div className="px-8 py-4 border-b border-hairline-light flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <Bot className="w-5 h-5 text-mute" />
+            <span className="text-sm font-mono text-mute tracking-widest uppercase">Agent Monitor</span>
+          </div>
+          
+          <div className="flex bg-canvas p-0.5 rounded-lg border border-hairline-light text-[10px] font-mono uppercase font-bold select-none shadow-xs">
+            <button
+              type="button"
+              onClick={() => setShowConsole(false)}
+              className={clsx(
+                "px-3 py-1.5 rounded-md border-none cursor-pointer text-[10px] uppercase font-mono font-bold transition-all",
+                !showConsole 
+                  ? "bg-primary text-on-primary shadow-xs" 
+                  : "text-mute bg-transparent hover:text-ink"
+              )}
+            >
+              Status Bot
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowConsole(true)}
+              className={clsx(
+                "px-3 py-1.5 rounded-md border-none cursor-pointer text-[10px] uppercase font-mono font-bold transition-all",
+                showConsole 
+                  ? "bg-primary text-on-primary shadow-xs" 
+                  : "text-mute bg-transparent hover:text-ink"
+              )}
+            >
+              Terminal Console
+            </button>
+          </div>
         </div>
-        <div className="p-8 flex-1 overflow-y-auto font-mono text-[13px] leading-relaxed min-w-0">
-          {logs.length === 0 ? (
-            <div className="text-on-dark-soft italic">Waiting for command...</div>
-          ) : (
-            <div className="space-y-4 min-w-0">
-              {logs.map(log => (
-                <div key={log.id} className="flex items-start gap-4 min-w-0">
-                  <span className="text-slate-600 shrink-0 select-none">[{log.timestamp}]</span>
-                  <span className={clsx(
-                    "break-all min-w-0",
-                    log.type === 'success' ? "text-accent-teal" :
-                    log.type === 'warning' ? "text-accent-warning" :
-                    log.type === 'error' ? "text-accent-danger" :
-                    "text-on-dark-soft"
-                  )}>
-                    {log.message}
-                  </span>
+
+        {/* Monitor Body */}
+        {showConsole ? (
+          <div className="p-8 flex-1 overflow-y-auto font-mono text-[13px] leading-relaxed min-w-0">
+            {logs.length === 0 ? (
+              <div className="text-mute italic">Waiting for deployment command...</div>
+            ) : (
+              <div className="space-y-3 min-w-0">
+                {logs.map(log => (
+                  <div key={log.id} className="flex items-start gap-3 min-w-0 border-b border-hairline-light/40 pb-2 last:border-b-0">
+                    <span className="text-stone/60 shrink-0 select-none font-mono">[{log.timestamp}]</span>
+                    <span className={clsx(
+                      "break-all min-w-0 font-mono",
+                      log.type === 'success' ? "text-accent-teal font-semibold" :
+                      log.type === 'warning' ? "text-accent-warning font-semibold" :
+                      log.type === 'error' ? "text-accent-danger font-semibold" :
+                      "text-ink/90"
+                    )}>
+                      {log.message}
+                    </span>
+                  </div>
+                ))}
+                <div ref={logsEndRef} />
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center relative overflow-hidden select-none">
+            {/* Scoped CSS animations for FlowBot */}
+            <style>{`
+              @keyframes flowbot-hover {
+                0% { transform: translateY(0px); }
+                50% { transform: translateY(-8px); }
+                100% { transform: translateY(0px); }
+              }
+              @keyframes flowbot-antenna-blink {
+                0%, 100% { opacity: 0.4; }
+                50% { opacity: 1; }
+              }
+              @keyframes flowbot-scan {
+                0% { transform: translateY(-12px); opacity: 0.2; }
+                50% { opacity: 0.9; }
+                100% { transform: translateY(16px); opacity: 0.2; }
+              }
+              @keyframes flowbot-success-bounce {
+                0%, 100% { transform: translateY(0) scaleY(1); }
+                50% { transform: translateY(-16px) scaleY(0.92); }
+              }
+              @keyframes flowbot-error-shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-4px) rotate(-1deg); }
+                75% { transform: translateX(4px) rotate(1deg); }
+              }
+              @keyframes flowbot-jet-pulse {
+                0%, 100% { opacity: 0.6; transform: scaleY(0.85) scaleX(0.95); }
+                50% { opacity: 1; transform: scaleY(1.15) scaleX(1.05); }
+              }
+              @keyframes flowbot-shadow-pulse {
+                0%, 100% { transform: scale(0.9); opacity: 0.15; }
+                50% { transform: scale(1.1); opacity: 0.25; }
+              }
+
+              .flowbot-svg-root {
+                transition: all 0.3s ease-in-out;
+              }
+              .flowbot-svg-root .expr-idle,
+              .flowbot-svg-root .expr-running,
+              .flowbot-svg-root .expr-success,
+              .flowbot-svg-root .expr-error {
+                display: none;
+              }
+
+              /* Apply specific state displays */
+              .flowbot-svg-root.state-idle .expr-idle { display: block; }
+              .flowbot-svg-root.state-running .expr-running { display: block; }
+              .flowbot-svg-root.state-success .expr-success { display: block; }
+              .flowbot-svg-root.state-error .expr-error { display: block; }
+
+              .bot-hover-part {
+                transform-box: fill-box;
+                transform-origin: center;
+              }
+
+              /* Idle State animations */
+              .state-idle .bot-hover-part {
+                animation: flowbot-hover 3.5s ease-in-out infinite;
+              }
+
+              /* Running State animations */
+              .state-running .bot-hover-part {
+                animation: flowbot-hover 1.2s ease-in-out infinite;
+              }
+              .state-running .bot-antenna-bulb {
+                animation: flowbot-antenna-blink 0.6s infinite;
+                fill: #3b82f6;
+              }
+              .state-running .bot-scan-line {
+                animation: flowbot-scan 1.6s linear infinite;
+              }
+
+              /* Success State animations */
+              .state-success .bot-hover-part {
+                animation: flowbot-success-bounce 0.7s ease-in-out infinite;
+                transform-box: fill-box;
+                transform-origin: 50% 100%;
+              }
+              .state-success .bot-antenna-bulb {
+                fill: #10b981;
+              }
+
+              /* Error State animations */
+              .state-error .bot-hover-part {
+                animation: flowbot-error-shake 0.15s infinite;
+              }
+              .state-error .bot-antenna-bulb {
+                animation: flowbot-antenna-blink 0.2s infinite;
+                fill: #ef4444;
+              }
+
+              /* Universal Flame and Shadow animations */
+              .bot-jet-flame {
+                animation: flowbot-jet-pulse 0.8s ease-in-out infinite;
+                transform-box: fill-box;
+                transform-origin: 50% 0%;
+              }
+              .bot-ground-shadow {
+                animation: flowbot-shadow-pulse 2s ease-in-out infinite;
+                transform-box: fill-box;
+                transform-origin: center;
+              }
+            `}</style>
+
+            <div className="flex flex-col items-center max-w-sm">
+              {/* Animated FlowBot SVG */}
+              <svg 
+                width="220" 
+                height="220" 
+                viewBox="0 0 220 220" 
+                fill="none" 
+                className={clsx("flowbot-svg-root mb-8", {
+                  'state-idle': botState === 'idle',
+                  'state-running': botState === 'running',
+                  'state-success': botState === 'success',
+                  'state-error': botState === 'error',
+                })}
+              >
+                {/* Ground Shadow */}
+                <ellipse cx="110" cy="204" rx="28" ry="5" fill="#000000" opacity="0.25" className="bot-ground-shadow" />
+
+                {/* Group of parts that hover together */}
+                <g className="bot-hover-part">
+                  {/* Jet Fire / Flame */}
+                  <path d="M96 178 L110 196 L124 178 Z" fill={
+                    botState === 'error' ? '#ef4444' :
+                    botState === 'success' ? '#10b981' :
+                    '#38bdf8'
+                  } className="bot-jet-flame" />
+
+                  {/* Antenna */}
+                  <line x1="110" y1="52" x2="110" y2="28" stroke="#cbd5e1" strokeWidth="4" strokeLinecap="round" />
+                  <circle cx="110" cy="22" r="6" fill="#64748b" className="bot-antenna-bulb" />
+
+                  {/* Ears */}
+                  <rect x="52" y="76" width="8" height="24" rx="4" fill="#64748b" />
+                  <rect x="160" y="76" width="8" height="24" rx="4" fill="#64748b" />
+
+                  {/* Head Frame */}
+                  <rect x="60" y="50" width="100" height="84" rx="22" fill="#1e293b" stroke="#cbd5e1" strokeWidth="4" />
+
+                  {/* Dark Screen */}
+                  <rect x="72" y="62" width="76" height="52" rx="12" fill="#0f172a" stroke="#334155" strokeWidth="2" />
+
+                  {/* Screen Expressions */}
+                  {/* IDLE Expression */}
+                  <g className="expr-idle">
+                    <path d="M85 88 Q92 94 99 88" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" fill="none" />
+                    <path d="M121 88 Q128 94 135 88" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" fill="none" />
+                  </g>
+
+                  {/* RUNNING Expression */}
+                  <g className="expr-running">
+                    <circle cx="92" cy="85" r="4.5" fill="#38bdf8" />
+                    <circle cx="128" cy="85" r="4.5" fill="#38bdf8" />
+                    <line x1="76" y1="66" x2="144" y2="66" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" className="bot-scan-line" opacity="0.8" />
+                  </g>
+
+                  {/* SUCCESS Expression */}
+                  <g className="expr-success">
+                    <path d="M85 90 L92 83 L99 90" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                    <path d="M121 90 L128 83 L135 90" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                    <path d="M103 102 Q110 108 117 102" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                  </g>
+
+                  {/* ERROR Expression */}
+                  <g className="expr-error">
+                    <path d="M86 81 L96 91 M96 81 L86 91" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" />
+                    <path d="M124 81 L134 91 M134 81 L124 91" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" />
+                    <line x1="102" y1="103" x2="118" y2="103" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" />
+                  </g>
+
+                  {/* Neck */}
+                  <rect x="96" y="132" width="28" height="12" rx="3" fill="#475569" />
+
+                  {/* Body Frame */}
+                  <rect x="74" y="142" width="72" height="38" rx="10" fill="#1e293b" stroke="#cbd5e1" strokeWidth="4" />
+                  
+                  {/* Heart Light */}
+                  <circle cx="110" cy="161" r="6" fill={
+                    botState === 'error' ? '#ef4444' :
+                    botState === 'success' ? '#10b981' :
+                    '#3b82f6'
+                  } />
+                </g>
+              </svg>
+
+              {/* Status Description Card */}
+              <div className="bg-canvas border border-hairline-light rounded-2xl p-6 shadow-sm max-w-sm text-center">
+                <h4 className={clsx("text-xs font-bold uppercase tracking-wider", {
+                  'text-accent-teal': botState === 'success',
+                  'text-accent-danger': botState === 'error',
+                  'text-accent-blue-link': botState === 'running',
+                  'text-mute': botState === 'idle'
+                })}>
+                  {statusInfo.title}
+                </h4>
+                <p className="text-xs text-mute mt-2.5 leading-relaxed font-semibold">
+                  {statusInfo.desc}
+                </p>
+              </div>
+
+              {/* Token Usage Diagnostic Footer */}
+              {tokenStats?.lastRun?.total > 0 && (
+                <div className="mt-6 flex items-center gap-2 justify-center px-4 py-3 bg-canvas border border-hairline-light rounded-xl text-[10px] font-mono text-mute shadow-xs max-w-sm select-text">
+                  <span className="text-accent-teal shrink-0">⚡</span>
+                  <div className="text-left leading-normal">
+                    <span className="text-accent-blue-link font-bold">FlowBot Diagnostic:</span> Last run consumed <strong className="text-ink font-bold">{tokenStats.lastRun.total.toLocaleString()}</strong> tokens <span className="opacity-60">(Prompt: {tokenStats.lastRun.prompt.toLocaleString()} | Output: {tokenStats.lastRun.completion.toLocaleString()})</span>. Est. cost: <strong className="text-accent-teal font-bold">${(tokenStats.lastRun.prompt * 0.000000075 + tokenStats.lastRun.completion * 0.0000003).toFixed(5)}</strong>
+                  </div>
                 </div>
-              ))}
-              <div ref={logsEndRef} />
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -782,8 +1119,8 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
       <div className="w-full h-full flex flex-col overflow-hidden bg-canvas-light">
         <header className="px-10 py-6 bg-canvas-light border-b border-hairline-light shrink-0 text-left w-full flex justify-between items-center">
           <div>
-            <h2 className="text-heading-lg text-ink font-semibold uppercase tracking-tight">Run AI Agent</h2>
-            <p className="text-xs text-charcoal mt-0.5">Deploy the AI agent to scrape, tailor, and prepare your application.</p>
+            <h2 className="text-heading-lg text-ink font-semibold uppercase tracking-tight">Run FlowBot</h2>
+            <p className="text-xs text-charcoal mt-0.5">Deploy FlowBot to scrape, tailor, and prepare your application.</p>
           </div>
           {onClose && (
             <button 
@@ -803,9 +1140,16 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
 
   return (
     <div className="w-full h-full flex flex-col overflow-y-auto bg-canvas-light">
-      <header className="px-12 py-20 bg-canvas-light border-b border-hairline-light shrink-0 text-left max-w-7xl mx-auto w-full">
-        <h1 className="text-display-xl text-ink mb-4 font-semibold tracking-tight uppercase">Agent Runner</h1>
-        <p className="text-lead text-charcoal max-w-2xl">Deploy the AI agent to scrape, tailor, and prepare your application.</p>
+      <header className="px-12 py-10 bg-canvas border-b border-hairline-light shrink-0 text-left w-full max-w-7xl mx-auto flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center shadow-xs">
+              <Bot className="w-5 h-5 animate-fade-in" />
+            </div>
+            <h1 className="text-heading-lg text-ink font-bold tracking-tight uppercase">FlowBot</h1>
+          </div>
+          <p className="text-xs text-mute mt-2 max-w-xl">Deploy FlowBot to automatically scrape descriptions, align credentials, and tailor your profile assets.</p>
+        </div>
       </header>
       {layoutContent}
     </div>

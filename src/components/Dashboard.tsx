@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useAppState } from '../state';
-import { Target, CheckCircle2, RotateCw, Briefcase, TrendingUp } from 'lucide-react';
+import { Target, CheckCircle2, RotateCw, Briefcase, TrendingUp, Activity, Bot } from 'lucide-react';
 import clsx from 'clsx';
 import type { ApplicationStatus } from '../types';
 function Sparkline({ data, color = 'currentColor' }: { data: number[]; color?: string }) {
@@ -37,6 +37,38 @@ export function Dashboard() {
   const [hoveredDay, setHoveredDay] = useState<{ dateStr: string; date: Date; count: number } | null>(null);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
+
+  const [tokenStats, setTokenStats] = useState<any>(() => {
+    try {
+      const saved = localStorage.getItem('agent_token_stats');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      lastRun: { prompt: 0, completion: 0, total: 0 },
+      lifetime: { prompt: 0, completion: 0, total: 0 },
+      byFeature: {
+        tailor: 0,
+        discover: 0,
+        profile: 0,
+        interview: 0,
+        email: 0,
+        general: 0
+      }
+    };
+  });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      try {
+        const saved = localStorage.getItem('agent_token_stats');
+        if (saved) {
+          setTokenStats(JSON.parse(saved));
+        }
+      } catch (e) {}
+    };
+    window.addEventListener('token_stats_updated', handleUpdate);
+    return () => window.removeEventListener('token_stats_updated', handleUpdate);
+  }, []);
 
   const pendingSuggestions = emailSuggestions.filter(s => s.status === 'pending');
 
@@ -352,26 +384,28 @@ export function Dashboard() {
       <div className="w-full px-12 pt-24 pb-12 max-w-7xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="max-w-2xl">
           <h1 className="text-display-lg text-ink font-semibold tracking-[-1.5px] uppercase">
-            Console
+            Dashboard
           </h1>
           <p className="text-body text-sm mt-3 leading-relaxed max-w-lg">
             Monitor your autonomous application pipelines, analyze skill embeddings, and review recent matching alerts.
           </p>
         </div>
         
-        {/* Top-Right Pill Action Group */}
-        <div className="flex items-center bg-surface-soft p-1 rounded-full border border-hairline-light shrink-0">
+        {/* Top-Right Action Buttons Group */}
+        <div className="flex items-center gap-3 shrink-0">
           <button 
             onClick={() => setView('tracker')}
-            className="px-4 py-2 text-xs font-semibold text-ink bg-canvas-light rounded-full shadow-product border-none outline-none cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-ink bg-canvas hover:bg-surface-soft border border-hairline-light rounded-md shadow-product cursor-pointer transition-all"
           >
+            <Briefcase className="w-4 h-4 text-mute" />
             Job Tracker
           </button>
           <button 
             onClick={() => setView('runner')}
-            className="px-4 py-2 text-xs font-semibold text-mute hover:text-ink bg-transparent rounded-full border-none outline-none cursor-pointer transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-on-primary bg-primary hover:bg-primary-focus rounded-md shadow-product cursor-pointer transition-all border-none"
           >
-            Launch Agent
+            <Bot className="w-4 h-4" />
+            Deploy FlowBot
           </button>
         </div>
       </div>
@@ -570,7 +604,7 @@ export function Dashboard() {
           
           <div className="flex gap-3">
             {/* Day labels column */}
-            <div className="grid grid-rows-7 text-[9px] text-mute font-mono uppercase tracking-wider select-none pr-1 justify-items-end items-center" style={{ height: '102px', rowGap: '3px', marginTop: '19px' }}>
+            <div className="grid grid-rows-7 text-[9px] text-mute font-mono uppercase tracking-wider select-none pr-1 justify-items-end items-center" style={{ height: '95px', rowGap: '3px', marginTop: '19px' }}>
               <span></span>
               <span>Mon</span>
               <span></span>
@@ -581,7 +615,7 @@ export function Dashboard() {
             </div>
                {/* Heatmap Grid container */}
             <div className="flex-1 overflow-x-auto pb-2 scrollbar-none">
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(53, minmax(0, 1fr))', gridTemplateRows: '16px repeat(7, 12px)', gap: '3px', minWidth: '760px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(53, 11px)', gridTemplateRows: '16px repeat(7, 11px)', gap: '3px', width: 'max-content' }}>
                 {/* Month labels */}
                 {monthLabels.map((lbl, idx) => (
                   <span 
@@ -601,7 +635,7 @@ export function Dashboard() {
                   return (
                     <div
                       key={idx}
-                      className={clsx("w-3 h-3 rounded-[2px] transition-all cursor-pointer hover:scale-110", colorClass)}
+                      className={clsx("w-[11px] h-[11px] rounded-[1.5px] transition-all cursor-pointer hover:scale-110", colorClass)}
                       style={{ gridColumn: col + 1, gridRow: row + 2 }}
                       title={`${day.count} job${day.count === 1 ? '' : 's'} applied on ${day.dateStr}`}
                       onMouseEnter={() => setHoveredDay(day)}
@@ -731,58 +765,134 @@ export function Dashboard() {
             </div>
           </div>
 
-          {/* Right Card: Vector DB Console (Dark Card) */}
-          <div className="lg:col-span-5 bg-surface-dark text-on-dark rounded-lg p-8 flex flex-col justify-between">
-            <div className="space-y-6">
-              <div className="border-b border-surface-dark-elevated pb-4 flex items-center justify-between">
-                <h3 className="text-title-sm text-on-dark font-semibold uppercase tracking-wider font-mono">System Cache</h3>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase bg-[#34d399]/15 text-[#34d399]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent-teal animate-ping" />
-                  ● Active
-                </span>
-              </div>
-              
-              <p className="text-on-dark-soft text-xs leading-relaxed font-sans">
-                The local FAISS vector store indexes your experiences, education history, and tailored resumes for contextual parsing.
-              </p>
-              
-              <div className="space-y-4 font-mono text-xs pt-4">
-                <div className="flex justify-between border-b border-surface-dark-elevated pb-3">
-                  <span className="text-on-dark-soft">Index Cache</span>
-                  <span className="text-on-dark font-semibold">12.4 MB</span>
-                </div>
-                <div className="flex justify-between border-b border-surface-dark-elevated pb-3">
-                  <span className="text-on-dark-soft">Document Blocks</span>
-                  <span className="text-on-dark font-semibold">2,408 Chunks</span>
-                </div>
-                <div className="flex justify-between border-b border-surface-dark-elevated pb-3">
-                  <span className="text-on-dark-soft">FAISS Status</span>
-                  <span className="text-[#34d399] font-bold">Optimal</span>
-                </div>
-              </div>
-            </div>
+          {/* Right Card: AI Resource Monitor (Dark Card) */}
+          {(() => {
+            const maxLimit = 500000;
+            const lifetimeTotal = tokenStats?.lifetime?.total || 0;
+            const percentage = Math.min(100, Math.round((lifetimeTotal / maxLimit) * 100));
+            
+            // SVG Circle parameters
+            const radius = 30;
+            const circumference = 2 * Math.PI * radius; // ~188.5
+            const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
-            <div className="pt-8">
-              <button 
-                onClick={() => setView('runner')}
-                className="w-full bg-white hover:bg-[#e5e7eb] text-[#111111] py-3.5 rounded-md text-xs font-bold uppercase transition-all cursor-pointer border-none shadow-product"
-              >
-                Deploy Scraper Agent
-              </button>
-            </div>
-          </div>
+            const byFeature = tokenStats?.byFeature || {};
+            const tailorTokens = byFeature.tailor || 0;
+            const discoverTokens = byFeature.discover || 0;
+            const emailTokens = byFeature.email || 0;
+            const interviewTokens = byFeature.interview || 0;
+            const profileTokens = byFeature.profile || 0;
+            
+            const featureSum = tailorTokens + discoverTokens + emailTokens + interviewTokens + profileTokens || 1;
+
+            const tailorPct = Math.round((tailorTokens / featureSum) * 100);
+            const discoverPct = Math.round((discoverTokens / featureSum) * 100);
+            const emailPct = Math.round((emailTokens / featureSum) * 100);
+            const interviewPct = Math.round((interviewTokens / featureSum) * 100);
+            const profilePct = Math.round((profileTokens / featureSum) * 100);
+
+            return (
+              <div className="lg:col-span-5 bg-surface-soft border border-hairline-light rounded-lg p-8 flex flex-col justify-between select-none">
+                <div className="space-y-6">
+                  <div className="border-b border-hairline-light pb-4 flex items-center justify-between">
+                    <h3 className="text-title-sm text-ink font-semibold uppercase tracking-wider font-mono">AI Resource Monitor</h3>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase bg-accent-teal/10 text-accent-teal border border-accent-teal/20 animate-fade-in">
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent-teal animate-pulse" />
+                      Active
+                    </span>
+                  </div>
+
+                  {/* Circular Consumption Widget */}
+                  <div className="flex items-center gap-6 py-2">
+                    <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 80 80">
+                        {/* Background Track */}
+                        <circle
+                          cx="40"
+                          cy="40"
+                          r={radius}
+                          fill="transparent"
+                          stroke="var(--color-hairline-light)"
+                          strokeWidth="6"
+                        />
+                        {/* Active Progress */}
+                        <circle
+                          cx="40"
+                          cy="40"
+                          r={radius}
+                          fill="transparent"
+                          stroke="url(#token-gradient)"
+                          strokeWidth="6"
+                          strokeDasharray={circumference}
+                          strokeDashoffset={strokeDashoffset}
+                          strokeLinecap="round"
+                          className="transition-all duration-1000 ease-out"
+                        />
+                        <defs>
+                          <linearGradient id="token-gradient" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor="#38bdf8" />
+                            <stop offset="100%" stopColor="#10b981" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      {/* Centered Percentage */}
+                      <div className="absolute flex flex-col items-center">
+                        <span className="text-base font-bold text-ink font-mono leading-none">{percentage}%</span>
+                        <span className="text-[8px] text-mute uppercase font-mono tracking-wider mt-0.5">Used</span>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="text-xl font-bold text-ink font-mono truncate">
+                        {lifetimeTotal.toLocaleString()}
+                      </div>
+                      <div className="text-[9px] text-mute uppercase font-mono tracking-wider mt-1 truncate">
+                        Tokens Spent / {maxLimit.toLocaleString()} Max
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Segmented Distribution Bar */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-[9px] text-mute uppercase font-mono tracking-wider">
+                      <span>Feature Breakdown</span>
+                      <span>Total: {lifetimeTotal > 0 ? 'Allocated' : '0 Tokens'}</span>
+                    </div>
+
+                    <div className="h-2 w-full bg-faint rounded-full overflow-hidden flex">
+                      {tailorTokens > 0 && <div style={{ width: `${tailorPct}%` }} className="bg-[#38bdf8] h-full" title={`Resume Tailor: ${tailorPct}%`} />}
+                      {discoverTokens > 0 && <div style={{ width: `${discoverPct}%` }} className="bg-[#10b981] h-full" title={`Job Search: ${discoverPct}%`} />}
+                      {emailTokens > 0 && <div style={{ width: `${emailPct}%` }} className="bg-[#fb923c] h-full" title={`Email Scanner: ${emailPct}%`} />}
+                      {interviewTokens > 0 && <div style={{ width: `${interviewPct}%` }} className="bg-[#a78bfa] h-full" title={`Interview Coach: ${interviewPct}%`} />}
+                      {profileTokens > 0 && <div style={{ width: `${profilePct}%` }} className="bg-[#94a3b8] h-full" title={`Profile Parser: ${profilePct}%`} />}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2 text-[9px] font-mono text-mute">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8] shrink-0" />
+                        <span className="truncate">Resume Tailoring ({tailorPct}%)</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
+                        <span className="truncate">Job Search ({discoverPct}%)</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#fb923c] shrink-0" />
+                        <span className="truncate">Email Sync ({emailPct}%)</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#a78bfa] shrink-0" />
+                        <span className="truncate">Interview Coach ({interviewPct}%)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
         </div>
       </div>
-
-      {/* Dark Closing Footer */}
-      <footer className="bg-surface-dark text-on-dark-soft border-t border-surface-dark-elevated py-16 px-12 shrink-0">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-mono">
-          <div className="flex items-center gap-2">
-            <span className="font-display font-semibold text-on-dark text-sm">TalentFlow</span>
-          </div>
-        </div>
-      </footer>
 
     </div>
   );

@@ -12,6 +12,57 @@ const ai = new GoogleGenAI({
   apiKey: apiKey || '',
 });
 
+export interface TokenStats {
+  lastRun: { prompt: number; completion: number; total: number };
+  lifetime: { prompt: number; completion: number; total: number };
+  byFeature: Record<string, number>;
+}
+
+export function updateTokenStats(prompt: number, completion: number, category: string = 'general') {
+  try {
+    const defaultStats: TokenStats = {
+      lastRun: { prompt: 0, completion: 0, total: 0 },
+      lifetime: { prompt: 0, completion: 0, total: 0 },
+      byFeature: {
+        tailor: 0,
+        discover: 0,
+        profile: 0,
+        interview: 0,
+        email: 0,
+        general: 0
+      }
+    };
+    
+    const statsStr = localStorage.getItem('agent_token_stats');
+    const stats: TokenStats = statsStr ? { ...defaultStats, ...JSON.parse(statsStr) } : defaultStats;
+    
+    // Ensure nested objects are initialized
+    stats.lastRun = stats.lastRun || { prompt: 0, completion: 0, total: 0 };
+    stats.lifetime = stats.lifetime || { prompt: 0, completion: 0, total: 0 };
+    stats.byFeature = stats.byFeature || {};
+    
+    const total = prompt + completion;
+    
+    // Increment lastRun
+    stats.lastRun.prompt += prompt;
+    stats.lastRun.completion += completion;
+    stats.lastRun.total += total;
+    
+    // Increment lifetime
+    stats.lifetime.prompt += prompt;
+    stats.lifetime.completion += completion;
+    stats.lifetime.total += total;
+    
+    // Increment feature category
+    stats.byFeature[category] = (stats.byFeature[category] || 0) + total;
+    
+    localStorage.setItem('agent_token_stats', JSON.stringify(stats));
+    window.dispatchEvent(new CustomEvent('token_stats_updated'));
+  } catch (e) {
+    console.error('Failed to update token stats:', e);
+  }
+}
+
 function cleanJSONString(text: string): string {
   let cleaned = text.trim();
   
@@ -82,7 +133,7 @@ function cleanJSONString(text: string): string {
   return cleaned;
 }
 
-async function generateLLMResponse(prompt: string): Promise<string> {
+async function generateLLMResponse(prompt: string, category: string = 'general'): Promise<string> {
   let activeProvider = 'gemini';
   let geminiModel = 'gemini-3.5-flash';
   let geminiApiKey = '';
@@ -134,6 +185,10 @@ async function generateLLMResponse(prompt: string): Promise<string> {
         }
 
         const data = await response.json();
+        if (data?.usage) {
+          console.log(`[DeepSeek Token Usage] Model: ${deepseekModel || 'deepseek-chat'} | Prompt: ${data.usage.prompt_tokens} | Output: ${data.usage.completion_tokens} | Total: ${data.usage.total_tokens}`);
+          updateTokenStats(data.usage.prompt_tokens || 0, data.usage.completion_tokens || 0, category);
+        }
         const choice = data?.choices?.[0];
         if (!choice?.message?.content) {
           throw new Error('Invalid response format from DeepSeek API');
@@ -153,6 +208,11 @@ async function generateLLMResponse(prompt: string): Promise<string> {
             responseMimeType: 'application/json',
           },
         });
+
+        if (response.usageMetadata) {
+          console.log(`[Gemini Token Usage] Model: ${currentGeminiModel} | Prompt: ${response.usageMetadata.promptTokenCount} | Output: ${response.usageMetadata.candidatesTokenCount} | Total: ${response.usageMetadata.totalTokenCount}`);
+          updateTokenStats(response.usageMetadata.promptTokenCount || 0, response.usageMetadata.candidatesTokenCount || 0, category);
+        }
 
         if (!response.text) {
           throw new Error('No response from Gemini');
@@ -291,7 +351,7 @@ Output MUST be valid JSON matching this schema:
 `;
 
   try {
-    const text = await generateLLMResponse(prompt);
+    const text = await generateLLMResponse(prompt, 'tailor');
     const data = JSON.parse(text) as JobMatchAnalysis;
     return data;
   } catch (error: any) {
@@ -358,7 +418,7 @@ Output MUST be valid JSON matching this schema exactly:
 `;
 
   try {
-    const text = await generateLLMResponse(prompt);
+    const text = await generateLLMResponse(prompt, 'profile');
     const data = JSON.parse(text) as Partial<UserProfile>;
     return data;
   } catch (error: any) {
@@ -452,7 +512,7 @@ Output MUST be valid JSON matching this schema:
 `;
 
   try {
-    const text = await generateLLMResponse(prompt);
+    const text = await generateLLMResponse(prompt, 'interview');
     return JSON.parse(text) as GradeReport;
   } catch (error: any) {
     console.error('Error grading interview answer:', error);
@@ -534,7 +594,7 @@ Output MUST be valid JSON matching this schema:
 `;
 
   try {
-    const responseText = await generateLLMResponse(prompt);
+    const responseText = await generateLLMResponse(prompt, 'email');
     return JSON.parse(responseText) as EmailAnalysisResult;
   } catch (error: any) {
     console.error('Error analyzing emails with AI:', error);
@@ -594,7 +654,7 @@ Output MUST be valid JSON matching this schema:
 `;
 
   try {
-    const responseText = await generateLLMResponse(prompt);
+    const responseText = await generateLLMResponse(prompt, 'profile');
     return JSON.parse(responseText) as LinkedInOptimizationResult;
   } catch (error: any) {
     console.error('Error optimizing LinkedIn profile:', error);
@@ -679,7 +739,7 @@ JSON SCHEMA:
 `;
 
   try {
-    const text = await generateLLMResponse(prompt);
+    const text = await generateLLMResponse(prompt, 'discover');
     const result = JSON.parse(text);
     return result.jobs || [];
   } catch (error) {
@@ -761,7 +821,7 @@ Output MUST be valid JSON matching this schema exactly:
 `;
 
   try {
-    const text = await generateLLMResponse(prompt);
+    const text = await generateLLMResponse(prompt, 'tailor');
     return JSON.parse(text) as TailoredJobAssets;
   } catch (error) {
     console.error('Error tailoring job assets:', error);

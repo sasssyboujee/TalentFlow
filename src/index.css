@@ -26,6 +26,8 @@
   --color-surface-card: #f5f5f5;
   --color-surface-deep: #101010;
   --color-surface-elevated: #1a1a1a;
+  --color-surface-dark: #0f172a;
+  --color-surface-dark-elevated: #1e293b;
   
   --color-hairline-light: #e5e7eb;
   --color-hairline-dark: rgba(255, 255, 255, 0.12);
@@ -196,6 +198,8 @@ html.dark {
   --color-surface-card: #161616;
   --color-surface-deep: #0a0a0a;
   --color-surface-elevated: #1e1e1e;
+  --color-surface-dark: #ffffff;
+  --color-surface-dark-elevated: #f3f4f6;
   --color-hairline-light: rgba(255, 255, 255, 0.08);
   --color-divider-soft: rgba(255, 255, 255, 0.04);
   --color-stone: #52525b;

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppState } from '../state';
-import { Key, Eye, EyeOff, Shield, ShieldAlert, Cpu, Sliders, FileText, Bot, Download, Upload, Trash2, CheckCircle2, Plus, Mail } from 'lucide-react';
+import { Key, Eye, EyeOff, Shield, ShieldAlert, Cpu, Sliders, FileText, Bot, Download, Upload, Trash2, CheckCircle2, Plus, Mail, Activity } from 'lucide-react';
 
 export function SettingsManager() {
   const { settings, updateSettings, profile, setProfile, applications, addApplication } = useAppState();
@@ -9,6 +9,61 @@ export function SettingsManager() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
   const [importError, setImportError] = useState('');
+
+  const [tokenStats, setTokenStats] = useState<any>(() => {
+    try {
+      const saved = localStorage.getItem('agent_token_stats');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      lastRun: { prompt: 0, completion: 0, total: 0 },
+      lifetime: { prompt: 0, completion: 0, total: 0 },
+      byFeature: {
+        tailor: 0,
+        discover: 0,
+        profile: 0,
+        interview: 0,
+        email: 0,
+        general: 0
+      }
+    };
+  });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      try {
+        const saved = localStorage.getItem('agent_token_stats');
+        if (saved) {
+          setTokenStats(JSON.parse(saved));
+        }
+      } catch (e) {}
+    };
+    window.addEventListener('token_stats_updated', handleUpdate);
+    return () => window.removeEventListener('token_stats_updated', handleUpdate);
+  }, []);
+
+  const handleResetTokenStats = () => {
+    try {
+      const defaultStats = {
+        lastRun: { prompt: 0, completion: 0, total: 0 },
+        lifetime: { prompt: 0, completion: 0, total: 0 },
+        byFeature: {
+          tailor: 0,
+          discover: 0,
+          profile: 0,
+          interview: 0,
+          email: 0,
+          general: 0
+        }
+      };
+      localStorage.setItem('agent_token_stats', JSON.stringify(defaultStats));
+      setTokenStats(defaultStats);
+      window.dispatchEvent(new CustomEvent('token_stats_updated'));
+      triggerSuccessFeedback();
+    } catch (e) {
+      console.error('Failed to reset token stats:', e);
+    }
+  };
   const [newAccount, setNewAccount] = useState({
     label: '',
     host: '',
@@ -247,13 +302,13 @@ export function SettingsManager() {
           </div>
         </section>
 
-        {/* Section 2: Agent Runner Behaviors */}
+        {/* Section 2: FlowBot Behaviors */}
         <section className="bg-canvas-light border border-hairline-light rounded-lg p-8 shadow-product">
           <div className="flex items-center gap-3 mb-6">
             <Sliders className="w-5 h-5 text-primary" />
             <div>
-              <h3 className="text-base font-bold text-ink">Autonomous Agent Settings</h3>
-              <p className="text-xs text-mute mt-0.5">Customize how the agent retrieves and filters job metrics.</p>
+              <h3 className="text-base font-bold text-ink">FlowBot Autonomous Settings</h3>
+              <p className="text-xs text-mute mt-0.5">Customize how FlowBot retrieves and filters job metrics.</p>
             </div>
           </div>
 
@@ -770,6 +825,70 @@ export function SettingsManager() {
                 <p className="text-xs text-mute leading-relaxed">
                   Active authentication states are stored in <code className="px-1 py-0.5 rounded bg-faint dark:bg-surface-elevated font-mono text-[10px]">sessionStorage</code> which is automatically destroyed once the tab is closed, protecting you against physical device snooping.
                 </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 7: FlowBot Resource Diagnostics */}
+        <section className="bg-canvas-light border border-hairline-light rounded-lg p-8 shadow-product">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Activity className="w-5 h-5 text-primary" />
+              <div>
+                <h3 className="text-base font-bold text-ink">FlowBot Resource Diagnostics</h3>
+                <p className="text-xs text-mute mt-0.5">Real-time tracking of input/output tokens and cost metrics.</p>
+              </div>
+            </div>
+            
+            <button
+              type="button"
+              onClick={handleResetTokenStats}
+              className="flex items-center gap-1.5 px-4 h-8 bg-surface-soft hover:bg-faint text-ink rounded-md text-xs font-bold transition-all border border-hairline-light cursor-pointer outline-none"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Clear Counters
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-5 bg-surface-soft border border-hairline-light rounded-lg text-left">
+              <span className="text-[10px] text-mute uppercase font-mono tracking-wider font-semibold">Lifetime Input (Prompt)</span>
+              <div className="text-2xl font-bold text-ink mt-2 font-mono">
+                {(tokenStats?.lifetime?.prompt || 0).toLocaleString()}
+              </div>
+              <span className="text-[10px] text-mute mt-1.5 block">Total input context analyzed</span>
+            </div>
+
+            <div className="p-5 bg-surface-soft border border-hairline-light rounded-lg text-left">
+              <span className="text-[10px] text-mute uppercase font-mono tracking-wider font-semibold">Lifetime Output (Completion)</span>
+              <div className="text-2xl font-bold text-ink mt-2 font-mono">
+                {(tokenStats?.lifetime?.completion || 0).toLocaleString()}
+              </div>
+              <span className="text-[10px] text-mute mt-1.5 block">Total text generated by LLMs</span>
+            </div>
+
+            <div className="p-5 bg-surface-soft border border-hairline-light rounded-lg text-left bg-primary/5 border-primary/20">
+              <span className="text-[10px] text-primary uppercase font-mono tracking-wider font-semibold">Lifetime Accrued Cost</span>
+              <div className="text-2xl font-bold text-primary mt-2 font-mono">
+                ${((tokenStats?.lifetime?.prompt || 0) * 0.000000075 + (tokenStats?.lifetime?.completion || 0) * 0.0000003).toFixed(4)}
+              </div>
+              <span className="text-[10px] text-mute mt-1.5 block">Est. developer cost saved</span>
+            </div>
+          </div>
+
+          <div className="mt-6 p-4 bg-surface-soft border border-hairline-light rounded-lg flex items-center justify-between text-left">
+            <div>
+              <span className="text-[10px] text-mute uppercase font-mono tracking-wider font-semibold">Active LLM Pipeline Model</span>
+              <div className="text-xs font-bold text-ink mt-1">
+                {settings.activeProvider === 'deepseek' ? settings.deepseekModel : settings.geminiModel}
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-[10px] text-mute uppercase font-mono tracking-wider font-semibold">Active API Key</span>
+              <div className="text-xs font-bold text-accent-teal mt-1">
+                {settings.activeProvider === 'deepseek' 
+                  ? (settings.deepseekApiKey ? 'Custom User Key' : 'Default Sandbox Key')
+                  : (settings.geminiApiKey ? 'Custom User Key' : 'Default Sandbox Key')}
               </div>
             </div>
           </div>
