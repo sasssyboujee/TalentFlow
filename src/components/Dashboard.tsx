@@ -327,11 +327,11 @@ export function Dashboard() {
   }, [heatmapData]);
 
   const getHeatmapColorClass = (count: number) => {
-    if (count === 0) return 'bg-slate-100/70 dark:bg-zinc-800/30 border border-slate-200/40 dark:border-zinc-800/20';
-    if (count === 1) return 'bg-emerald-500/15 dark:bg-emerald-400/10 border border-emerald-500/15';
-    if (count === 2) return 'bg-emerald-500/30 dark:bg-emerald-400/25 border border-emerald-500/25';
-    if (count === 3) return 'bg-emerald-500/60 dark:bg-emerald-400/50 border border-emerald-500/45';
-    return 'bg-emerald-500 dark:bg-emerald-400 border border-emerald-500 dark:border-emerald-400';
+    if (count === 0) return 'bg-[#ebedf0] dark:bg-[#161b22] border border-[#d0d7de]/10 dark:border-[#30363d]/10';
+    if (count === 1) return 'bg-[#9be9a8] dark:bg-[#0e4429]';
+    if (count === 2) return 'bg-[#40c463] dark:bg-[#006d32]';
+    if (count === 3) return 'bg-[#30a14e] dark:bg-[#26a641]';
+    return 'bg-[#216e39] dark:bg-[#39d353]';
   };
 
   const getStatusPillColor = (status: ApplicationStatus) => {
@@ -570,7 +570,7 @@ export function Dashboard() {
           
           <div className="flex gap-3">
             {/* Day labels column */}
-            <div className="grid grid-rows-7 text-[9px] text-mute font-mono uppercase tracking-wider select-none pr-1 justify-items-end items-center" style={{ height: '102px', rowGap: '3px', marginTop: '20px' }}>
+            <div className="grid grid-rows-7 text-[9px] text-mute font-mono uppercase tracking-wider select-none pr-1 justify-items-end items-center" style={{ height: '102px', rowGap: '3px', marginTop: '19px' }}>
               <span></span>
               <span>Mon</span>
               <span></span>
@@ -581,21 +581,28 @@ export function Dashboard() {
             </div>
                {/* Heatmap Grid container */}
             <div className="flex-1 overflow-x-auto pb-2 scrollbar-none">
-              {/* Month labels row */}
-              <div className="text-[9px] text-mute font-mono uppercase tracking-wider mb-2 select-none" style={{ display: 'grid', gridTemplateColumns: 'repeat(53, 1fr)', gap: '3px', minWidth: '760px', gridTemplateRows: 'auto' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(53, minmax(0, 1fr))', gridTemplateRows: '16px repeat(7, 12px)', gap: '3px', minWidth: '760px' }}>
+                {/* Month labels */}
                 {monthLabels.map((lbl, idx) => (
-                  <span key={idx} style={{ gridColumn: `${lbl.colIndex + 1} / span 3`, gridRow: 1 }}>{lbl.text}</span>
+                  <span 
+                    key={idx} 
+                    className="text-[9px] text-mute font-mono uppercase tracking-wider select-none"
+                    style={{ gridColumn: `${lbl.colIndex + 1} / span 3`, gridRow: 1, whiteSpace: 'nowrap', minWidth: 0 }}
+                  >
+                    {lbl.text}
+                  </span>
                 ))}
-              </div>
-              
-              {/* Cells grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(53, 1fr)', gridTemplateRows: 'repeat(7, 12px)', gap: '3px', minWidth: '760px' }}>
+                
+                {/* Cells grid */}
                 {heatmapData.map((day, idx) => {
+                  const col = Math.floor(idx / 7);
+                  const row = idx % 7;
                   const colorClass = getHeatmapColorClass(day.count);
                   return (
                     <div
                       key={idx}
                       className={clsx("w-3 h-3 rounded-[2px] transition-all cursor-pointer hover:scale-110", colorClass)}
+                      style={{ gridColumn: col + 1, gridRow: row + 2 }}
                       title={`${day.count} job${day.count === 1 ? '' : 's'} applied on ${day.dateStr}`}
                       onMouseEnter={() => setHoveredDay(day)}
                       onMouseLeave={() => setHoveredDay(null)}
@@ -620,11 +627,11 @@ export function Dashboard() {
             
             <div className="flex items-center gap-1.5 select-none">
               <span>Less</span>
-              <div className="w-2.5 h-2.5 rounded-[1px] bg-slate-100/70 dark:bg-zinc-800/30 border border-slate-200/40 dark:border-zinc-800/20" />
-              <div className="w-2.5 h-2.5 rounded-[1px] bg-emerald-500/15 dark:bg-emerald-400/10 border border-emerald-500/15" />
-              <div className="w-2.5 h-2.5 rounded-[1px] bg-emerald-500/30 dark:bg-emerald-400/25 border border-emerald-500/25" />
-              <div className="w-2.5 h-2.5 rounded-[1px] bg-emerald-500/60 dark:bg-emerald-400/50 border border-emerald-500/45" />
-              <div className="w-2.5 h-2.5 rounded-[1px] bg-emerald-500 dark:bg-emerald-400 border border-emerald-500 dark:border-emerald-400" />
+              <div className="w-2.5 h-2.5 rounded-[1px] bg-[#ebedf0] dark:bg-[#161b22] border border-[#d0d7de]/10 dark:border-[#30363d]/10" />
+              <div className="w-2.5 h-2.5 rounded-[1px] bg-[#9be9a8] dark:bg-[#0e4429]" />
+              <div className="w-2.5 h-2.5 rounded-[1px] bg-[#40c463] dark:bg-[#006d32]" />
+              <div className="w-2.5 h-2.5 rounded-[1px] bg-[#30a14e] dark:bg-[#26a641]" />
+              <div className="w-2.5 h-2.5 rounded-[1px] bg-[#216e39] dark:bg-[#39d353]" />
               <span>More</span>
             </div>
           </div>
