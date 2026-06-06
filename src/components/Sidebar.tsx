@@ -1,10 +1,10 @@
 import React from 'react';
 import { useAppState } from '../state';
-import { LayoutDashboard, ListTodo, Bot, UserCircle, Settings, Mail, Sun, Moon, Calendar, Compass } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Bot, UserCircle, Settings, Mail, Sun, Moon, Calendar, Compass, LogOut, ShieldAlert } from 'lucide-react';
 import clsx from 'clsx';
 
 export function Sidebar() {
-  const { view, setView, emailSuggestions, settings, updateSettings } = useAppState();
+  const { view, setView, emailSuggestions, settings, updateSettings, isGuest, logout } = useAppState();
   const pendingCount = emailSuggestions.filter(s => s.status === 'pending').length;
 
   const navItems = [
@@ -29,6 +29,15 @@ export function Sidebar() {
           <p className="text-[10px] uppercase tracking-wider text-mute font-mono mt-1">AI Career Suite</p>
         </div>
       </div>
+
+      {isGuest && (
+        <div className="mx-4 mt-4 px-3 py-2 bg-accent-warning/10 border border-accent-warning/20 text-accent-warning rounded-lg flex items-center gap-2">
+          <ShieldAlert className="w-4 h-4 shrink-0" />
+          <div className="text-[10px] leading-tight font-semibold">
+            Guest Session (Read-Only Mode)
+          </div>
+        </div>
+      )}
 
       <nav className="flex-1 px-4 py-8 space-y-1">
         {navItems.map((item) => {
@@ -92,6 +101,14 @@ export function Sidebar() {
         >
           <Settings className="w-4 h-4 shrink-0 text-current" />
           System Settings
+        </button>
+
+        <button 
+          onClick={logout}
+          className="w-full flex items-center gap-3 px-4 py-2.5 transition-all text-sm font-semibold rounded-md hover:bg-accent-danger/10 text-accent-danger bg-transparent border-none outline-none cursor-pointer"
+        >
+          <LogOut className="w-4 h-4 shrink-0 text-current" />
+          Log Out
         </button>
       </div>
     </aside>

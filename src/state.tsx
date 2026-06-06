@@ -171,6 +171,12 @@ interface AppStateContextType {
   updateSuggestionStatus: (id: string, status: EmailSuggestion['status']) => void;
   runnerState: RunnerState;
   setRunnerState: React.Dispatch<React.SetStateAction<RunnerState>>;
+  isAuthenticated: boolean;
+  isGuest: boolean;
+  user: { email: string } | null;
+  login: (email: string, password: string) => Promise<boolean>;
+  loginAsGuest: () => void;
+  logout: () => void;
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -178,6 +184,79 @@ const AppStateContext = createContext<AppStateContextType | undefined>(undefined
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [view, setView] = useState<ViewState>('dashboard');
   const [prefilledJob, setPrefilledJob] = useState<PrefilledJob | undefined>(undefined);
+
+  // Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    try {
+      const saved = sessionStorage.getItem('tf_auth');
+      return saved ? JSON.parse(saved).isAuthenticated : false;
+    } catch {
+      return false;
+    }
+  });
+
+  const [isGuest, setIsGuest] = useState<boolean>(() => {
+    try {
+      const saved = sessionStorage.getItem('tf_auth');
+      return saved ? JSON.parse(saved).isGuest : false;
+    } catch {
+      return false;
+    }
+  });
+
+  const [user, setUser] = useState<{ email: string } | null>(() => {
+    try {
+      const saved = sessionStorage.getItem('tf_auth');
+      return saved ? JSON.parse(saved).user : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    // Basic verification - for demonstration we allow admin@talentflow.ai / Password123! or any input meeting basic complexity
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const passwordRegex = /(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,}/;
+
+    if (!emailRegex.test(email) || !passwordRegex.test(password)) {
+      return false;
+    }
+
+    if (email === 'admin@talentflow.ai' && password !== 'Password123!') {
+      return false;
+    }
+
+    setIsAuthenticated(true);
+    setIsGuest(false);
+    const loggedUser = { email };
+    setUser(loggedUser);
+    
+    sessionStorage.setItem('tf_auth', JSON.stringify({
+      isAuthenticated: true,
+      isGuest: false,
+      user: loggedUser
+    }));
+    return true;
+  };
+
+  const loginAsGuest = () => {
+    setIsAuthenticated(false);
+    setIsGuest(true);
+    setUser(null);
+    sessionStorage.setItem('tf_auth', JSON.stringify({
+      isAuthenticated: false,
+      isGuest: true,
+      user: null
+    }));
+  };
+
+  const logout = () => {
+    setIsAuthenticated(false);
+    setIsGuest(false);
+    setUser(null);
+    sessionStorage.removeItem('tf_auth');
+    setView('dashboard');
+  };
 
   const [runnerState, setRunnerState] = useState<RunnerState>(() => {
     let initialTitle = 'Software Engineer';
@@ -419,7 +498,13 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       settings, updateSettings,
       prefilledJob, setPrefilledJob,
       emailSuggestions, saveSuggestions, updateSuggestionStatus,
-      runnerState, setRunnerState
+      runnerState, setRunnerState,
+      isAuthenticated,
+      isGuest,
+      user,
+      login,
+      loginAsGuest,
+      logout
     }}>
       {children}
     </AppStateContext.Provider>

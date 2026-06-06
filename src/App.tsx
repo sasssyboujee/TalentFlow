@@ -9,9 +9,14 @@ import { SettingsManager } from './components/SettingsManager';
 import { EmailScanner } from './components/EmailScanner';
 import { CalendarView } from './components/CalendarView';
 import { LinkedInOptimizer } from './components/LinkedInOptimizer';
+import { Login } from './components/Login';
 
 function AppContent() {
-  const { view } = useAppState();
+  const { view, isAuthenticated, isGuest } = useAppState();
+
+  if (!isAuthenticated && !isGuest) {
+    return <Login />;
+  }
 
   return (
     <div className="flex h-screen w-full overflow-hidden">

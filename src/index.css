@@ -60,8 +60,31 @@
   }
 }
 
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
 @utility animate-fade-in {
   animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@utility animate-shake {
+  animation: shake 0.2s ease-in-out 0s 2;
+}
+
+/* Modern Form Validation Styles using :user-invalid and :user-valid */
+input:user-invalid,
+input.user-invalid-fallback {
+  border-color: #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.05) !important;
+}
+
+input:user-valid,
+input.user-valid-fallback {
+  border-color: #10b981 !important;
+  background-color: rgba(16, 185, 129, 0.03) !important;
 }
 
 @utility text-hero-display {
