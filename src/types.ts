@@ -136,6 +136,7 @@ export interface EmailSuggestion {
   emailId: string;
   matchedJobId?: string | null;
   detectedDate?: string | null;
+  detectedLocation?: string | null;
 }
 
 export type ViewState = 'dashboard' | 'runner' | 'tracker' | 'profile' | 'settings' | 'email-scan' | 'calendar' | 'linkedin';

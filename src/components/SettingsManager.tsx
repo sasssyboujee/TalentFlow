@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppState } from '../state';
-import { Key, Eye, EyeOff, ShieldAlert, Cpu, Sliders, FileText, Bot, Download, Upload, Trash2, CheckCircle2, Plus, Mail } from 'lucide-react';
+import { Key, Eye, EyeOff, Shield, ShieldAlert, Cpu, Sliders, FileText, Bot, Download, Upload, Trash2, CheckCircle2, Plus, Mail } from 'lucide-react';
 
 export function SettingsManager() {
   const { settings, updateSettings, profile, setProfile, applications, addApplication } = useAppState();
@@ -727,6 +727,51 @@ export function SettingsManager() {
             >
               <Trash2 className="w-4 h-4" /> Reset App
             </button>
+          </div>
+        </section>
+
+        {/* Section 6: Cybersecurity Guard Guidelines */}
+        <section className="bg-canvas-light border border-hairline-light rounded-lg p-8 shadow-product">
+          <div className="flex items-center gap-3 mb-6">
+            <Shield className="w-5 h-5 text-accent-teal" />
+            <div>
+              <h3 className="text-base font-bold text-ink">Cybersecurity Guard Guidelines</h3>
+              <p className="text-xs text-mute mt-0.5">Recommended security best practices for handling keys and credential flows.</p>
+            </div>
+          </div>
+
+          <div className="space-y-6 text-xs text-charcoal leading-relaxed">
+            <div className="p-4 bg-surface-soft border border-hairline-light rounded-lg space-y-4">
+              <div>
+                <h4 className="text-xs font-bold text-ink uppercase font-mono tracking-wider mb-1 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent-teal" />
+                  API Key & Secrets Protection
+                </h4>
+                <p className="text-xs text-mute leading-relaxed">
+                  In Guest mode, API keys are held transiently in local storage. In production, always utilize server-side environment variables to load keys instead of saving them in browser local storage to prevent XSS-based theft.
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-bold text-ink uppercase font-mono tracking-wider mb-1 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent-teal" />
+                  Secure IMAP Integrations
+                </h4>
+                <p className="text-xs text-mute leading-relaxed">
+                  Our sync feature connects to IMAP over SSL (Port 993). Always generate app-specific passwords (e.g. from Google Security Account Settings) rather than providing your main account password.
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-bold text-ink uppercase font-mono tracking-wider mb-1 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent-teal" />
+                  Session Expiry & Browser Isolation
+                </h4>
+                <p className="text-xs text-mute leading-relaxed">
+                  Active authentication states are stored in <code className="px-1 py-0.5 rounded bg-faint dark:bg-surface-elevated font-mono text-[10px]">sessionStorage</code> which is automatically destroyed once the tab is closed, protecting you against physical device snooping.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 

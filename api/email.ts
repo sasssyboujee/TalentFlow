@@ -42,6 +42,13 @@ export default async function handler(req: any, res: any) {
           from: "HR Department <careers@techcorp.com>",
           date: new Date(Date.now() - 3600000 * 24).toISOString(),
           body: "Dear Alex, we are thrilled to offer you the position of Senior Frontend Engineer at TechCorp Innovate. We enjoyed speaking with you and believe you will make a fantastic addition to the team. Please find attached the formal offer letter specifying details of your compensation package. We request your response by Friday. Congratulations! Sincerely, HR Team"
+        },
+        {
+          id: "mock-email-4",
+          subject: "Google Interview Confirmation - Software Engineer II",
+          from: "Google Careers <recruiting@google.com>",
+          date: new Date(Date.now() - 3600000 * 4).toISOString(),
+          body: "Hi Alex, we are pleased to confirm your upcoming interview for the Software Engineer II position at Google. Your interview is scheduled for June 15, 2026 at 10:00 AM PST. The interview will be conducted via Zoom: https://zoom.us/j/9876543210. Please join 5 minutes early. Best regards, Google Recruiting Team"
         }
       ];
 

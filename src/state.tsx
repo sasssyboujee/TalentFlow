@@ -169,6 +169,7 @@ interface AppStateContextType {
   emailSuggestions: EmailSuggestion[];
   saveSuggestions: (suggestions: EmailSuggestion[]) => void;
   updateSuggestionStatus: (id: string, status: EmailSuggestion['status']) => void;
+  autoProcessSuggestions: (newSuggestions: EmailSuggestion[]) => void;
   runnerState: RunnerState;
   setRunnerState: React.Dispatch<React.SetStateAction<RunnerState>>;
   isAuthenticated: boolean;
@@ -220,6 +221,29 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
     if (!emailRegex.test(email) || !passwordRegex.test(password)) {
       return false;
+    }
+
+    // Check custom local storage accounts list
+    try {
+      const savedAccounts = localStorage.getItem('tf_accounts');
+      if (savedAccounts) {
+        const accounts = JSON.parse(savedAccounts);
+        const match = accounts.find((acc: any) => acc.email === email && acc.password === password);
+        if (match) {
+          setIsAuthenticated(true);
+          setIsGuest(false);
+          const loggedUser = { email };
+          setUser(loggedUser);
+          sessionStorage.setItem('tf_auth', JSON.stringify({
+            isAuthenticated: true,
+            isGuest: false,
+            user: loggedUser
+          }));
+          return true;
+        }
+      }
+    } catch (e) {
+      console.error('Error reading local accounts:', e);
     }
 
     if (email === 'admin@talentflow.ai' && password !== 'Password123!') {
@@ -490,6 +514,67 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const autoProcessSuggestions = (newSuggestions: EmailSuggestion[]) => {
+    setApplicationsState(prevApps => {
+      let updatedApps = [...prevApps];
+      
+      const processedSuggestions = newSuggestions.map(s => {
+        if (s.suggestedStatus === 'interview') {
+          let matchedJob = null;
+          if (s.matchedJobId) {
+            matchedJob = updatedApps.find(app => app.id === s.matchedJobId);
+          }
+          if (!matchedJob) {
+            matchedJob = updatedApps.find(app => 
+              app.company.toLowerCase().includes(s.detectedCompany.toLowerCase()) ||
+              s.detectedCompany.toLowerCase().includes(app.company.toLowerCase())
+            );
+          }
+
+          if (matchedJob) {
+            updatedApps = updatedApps.map(app => 
+              app.id === matchedJob.id 
+                ? {
+                    ...app,
+                    status: 'interview' as const,
+                    emailVerified: true,
+                    interviewDate: s.detectedDate || app.interviewDate || new Date().toISOString(),
+                    interviewLocation: s.detectedLocation || app.interviewLocation || null
+                  }
+                : app
+            );
+          } else {
+            const newApp: JobApplication = {
+              id: `job-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              company: s.detectedCompany,
+              role: s.detectedRole || 'Unknown Role',
+              url: 'Extracted from Email',
+              status: 'interview',
+              dateAdded: new Date().toISOString(),
+              emailVerified: true,
+              interviewDate: s.detectedDate || new Date().toISOString(),
+              interviewLocation: s.detectedLocation || null,
+            };
+            updatedApps = [newApp, ...updatedApps];
+          }
+          return { ...s, status: 'applied' as const };
+        }
+        return s;
+      });
+
+      localStorage.setItem('agent_applications', JSON.stringify(updatedApps));
+
+      setEmailSuggestionsState(prevSuggs => {
+        const filteredPrev = prevSuggs.filter(ps => !processedSuggestions.some(ns => ns.emailId === ps.emailId));
+        const nextSuggs = [...processedSuggestions, ...filteredPrev];
+        localStorage.setItem('agent_email_suggestions', JSON.stringify(nextSuggs));
+        return nextSuggs;
+      });
+
+      return updatedApps;
+    });
+  };
+
   return (
     <AppStateContext.Provider value={{
       view, setView,
@@ -497,7 +582,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       applications, addApplication, addApplications, deleteApplication, deleteApplications, updateApplicationStatus, updateApplicationsStatus, updateApplicationLogs, updateApplicationDetails,
       settings, updateSettings,
       prefilledJob, setPrefilledJob,
-      emailSuggestions, saveSuggestions, updateSuggestionStatus,
+      emailSuggestions, saveSuggestions, updateSuggestionStatus, autoProcessSuggestions,
       runnerState, setRunnerState,
       isAuthenticated,
       isGuest,

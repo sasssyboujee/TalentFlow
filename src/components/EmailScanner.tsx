@@ -14,7 +14,8 @@ export function EmailScanner() {
     updateApplicationDetails,
     emailSuggestions, 
     saveSuggestions, 
-    updateSuggestionStatus 
+    updateSuggestionStatus,
+    autoProcessSuggestions
   } = useAppState();
 
   const [isScanning, setIsScanning] = useState(false);
@@ -172,15 +173,19 @@ export function EmailScanner() {
           status: 'pending',
           matchedJobId: suggestion.matchedJobId || null,
           detectedDate: suggestion.detectedDate || null,
+          detectedLocation: suggestion.detectedLocation || null,
         });
       });
 
       if (newSuggestions.length > 0) {
-        saveSuggestions([...newSuggestions, ...emailSuggestions]);
-        setScanStatus(`Scan complete. Found ${newSuggestions.length} new suggestion(s)!${scanErrors.length > 0 ? ` Note: some mailboxes had errors: ${scanErrors.join(', ')}` : ''}`);
-        if (newSuggestions.length > 0) {
-          setSelectedSuggestionId(newSuggestions[0].id);
+        autoProcessSuggestions(newSuggestions);
+        const autoScheduledCount = newSuggestions.filter(s => s.suggestedStatus === 'interview').length;
+        if (autoScheduledCount > 0) {
+          setScanStatus(`Scan complete. Found ${newSuggestions.length} updates, and automatically scheduled ${autoScheduledCount} interview(s) to your Calendar!${scanErrors.length > 0 ? ` (Errors in: ${scanErrors.join(', ')})` : ''}`);
+        } else {
+          setScanStatus(`Scan complete. Found ${newSuggestions.length} new suggestion(s)!${scanErrors.length > 0 ? ` Note: some mailboxes had errors: ${scanErrors.join(', ')}` : ''}`);
         }
+        setSelectedSuggestionId(newSuggestions[0].id);
       } else {
         if (scanErrors.length > 0) {
           setScanStatus(`Scan complete. No suggestions. Note: errors in ${scanErrors.join(', ')}`);
@@ -219,7 +224,8 @@ export function EmailScanner() {
       updateApplicationDetails(matchedJob.id, {
         status: suggestion.suggestedStatus as ApplicationStatus,
         emailVerified: true,
-        interviewDate: suggestion.detectedDate || matchedJob.interviewDate
+        interviewDate: suggestion.detectedDate || matchedJob.interviewDate,
+        interviewLocation: suggestion.detectedLocation || matchedJob.interviewLocation || null
       });
     } else {
       // Create a new application in tracker
@@ -232,6 +238,7 @@ export function EmailScanner() {
         dateAdded: new Date().toISOString(),
         emailVerified: true,
         interviewDate: suggestion.detectedDate || null,
+        interviewLocation: suggestion.detectedLocation || null,
       };
       addApplication(newApp);
     }
@@ -443,7 +450,7 @@ export function EmailScanner() {
 
               {selectedSuggestion.status === 'applied' && (
                 <div className="flex items-center gap-2 p-4 bg-accent-teal/5 border border-accent-teal/20 text-accent-teal rounded-md text-xs font-bold">
-                  <Check className="w-4 h-4" /> Suggestion accepted and applied to Tracker!
+                  <Check className="w-4 h-4" /> {selectedSuggestion.suggestedStatus === 'interview' ? 'Interview auto-scheduled and applied to Calendar!' : 'Suggestion accepted and applied to Tracker!'}
                 </div>
               )}
 

@@ -469,6 +469,7 @@ export interface EmailAnalysisResult {
     reason: string;
     matchedJobId?: string | null;
     detectedDate?: string | null;
+    detectedLocation?: string | null;
   }[];
 }
 
@@ -511,8 +512,9 @@ INSTRUCTIONS:
 2. Extract the "detectedCompany" name and "detectedRole" title. Be precise. If matched to an existing tracked job, use the exact name from the tracked list.
 3. Write a concise 1-sentence "reason" summarizing the email's content (e.g., "Google sent an application confirmation email.").
 4. If an existing job matches, set "matchedJobId" to its ID. Otherwise, set it to null.
-5. If the email contains a scheduled interview date, time, or call details, extract it into "detectedDate" (as a ISO 8601 string or clear readable timestamp like "2026-06-09T14:00:00Z" or "Tuesday, June 9 at 2:00 PM"). If not found, set "detectedDate" to null.
-6. Return a JSON object with a "suggestions" array matching the schema below.
+5. If the email contains a scheduled interview date, time, or call details, extract it into "detectedDate" as a standard ISO 8601 string (e.g. "2026-06-09T14:00:00Z" or "2026-06-15T10:00:00-07:00"). If the year is not specified, assume the current year (2026). If the time is not specified, assume 09:00:00. If not found, set "detectedDate" to null.
+6. If the email contains a location, address, or online meeting link (such as a Zoom, Google Meet, Teams, or Calendly link), extract it into "detectedLocation". If not found, set "detectedLocation" to null.
+7. Return a JSON object with a "suggestions" array matching the schema below.
 
 Output MUST be valid JSON matching this schema:
 {
@@ -524,7 +526,8 @@ Output MUST be valid JSON matching this schema:
       "suggestedStatus": "applied" | "interview" | "rejected" | "offer" | "unknown",
       "reason": "string",
       "matchedJobId": "string" | null,
-      "detectedDate": "string" | null
+      "detectedDate": "string" | null,
+      "detectedLocation": "string" | null
     }
   ]
 }

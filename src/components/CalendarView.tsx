@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAppState } from '../state';
-import { Calendar as CalendarIcon, Clock, MapPin, Plus, X, ChevronLeft, ChevronRight, Edit2, CalendarDays, ExternalLink, AlertCircle, Sparkles } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, Plus, X, ChevronLeft, ChevronRight, Edit2, CalendarDays, ExternalLink, AlertCircle, Sparkles, Mail } from 'lucide-react';
 import type { JobApplication, ApplicationStatus } from '../types';
 import clsx from 'clsx';
 
@@ -503,6 +503,11 @@ function InterviewTimelineCard({ app, onEdit, onCancel, formatTime, formatDateFu
           <span className="text-[10px] text-mute truncate block">
             {app.company}
           </span>
+          {app.emailVerified && (
+            <span className="mt-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 bg-primary/10 text-primary border border-primary/20 text-[8px] font-mono font-bold uppercase rounded-md tracking-wider">
+              <Mail className="w-2.5 h-2.5 text-primary" /> Email Synced
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
