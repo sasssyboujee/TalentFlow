@@ -706,7 +706,7 @@ export function Dashboard() {
               
               <div className="flex gap-3">
                 {/* Day labels column */}
-                <div className="grid grid-rows-7 text-[9px] text-mute font-mono uppercase tracking-wider select-none pr-1 justify-items-end items-center" style={{ height: '95px', rowGap: '3px', marginTop: '19px' }}>
+                <div className="grid text-[9px] text-mute font-mono uppercase tracking-wider select-none pr-1 justify-items-end items-center" style={{ gridTemplateRows: 'repeat(7, 16px)', rowGap: '3px', marginTop: '19px' }}>
                   <span></span>
                   <span>Mon</span>
                   <span></span>
@@ -717,7 +717,7 @@ export function Dashboard() {
                 </div>
                 {/* Heatmap Grid container */}
                 <div className="flex-1 overflow-x-auto pb-2 scrollbar-none">
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(26, 11px)', gridTemplateRows: '16px repeat(7, 11px)', gap: '3px', width: 'max-content' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(26, 16px)', gridTemplateRows: '16px repeat(7, 16px)', gap: '3px', width: 'max-content' }}>
                     {/* Month labels */}
                     {monthLabels.map((lbl, idx) => (
                       <span 
@@ -737,7 +737,7 @@ export function Dashboard() {
                       return (
                         <div
                           key={idx}
-                          className={clsx("w-[11px] h-[11px] rounded-[1.5px] transition-all cursor-pointer hover:scale-110", colorClass)}
+                          className={clsx("w-[16px] h-[16px] rounded-[2px] transition-all cursor-pointer hover:scale-110", colorClass)}
                           style={{ gridColumn: col + 1, gridRow: row + 2 }}
                           title={`${day.count} job${day.count === 1 ? '' : 's'} applied on ${day.dateStr}`}
                           onMouseEnter={() => setHoveredDay(day)}
