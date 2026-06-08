@@ -42,11 +42,8 @@ export function updateTokenStats(prompt: number, completion: number, category: s
     stats.byFeature = stats.byFeature || {};
     
     const total = prompt + completion;
-    
-    // Increment lastRun
-    stats.lastRun.prompt += prompt;
-    stats.lastRun.completion += completion;
-    stats.lastRun.total += total;
+    // Set lastRun (most recent request token counts, not accumulated)
+    stats.lastRun = { prompt, completion, total };
     
     // Increment lifetime
     stats.lifetime.prompt += prompt;

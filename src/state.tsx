@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { JobApplication, UserProfile, ViewState, AgentLog, SystemSettings, EmailSuggestion } from './types';
+import { analyzeJobMatch } from './lib/gemini';
 
 // Initial Mock Data
 const INITIAL_PROFILE: UserProfile = {
@@ -404,7 +405,6 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener('AUTOJOB_EXTENSION_SEND', handleExtensionSend);
     return () => window.removeEventListener('AUTOJOB_EXTENSION_SEND', handleExtensionSend);
   }, []);
-
   // Persist Settings
   const [settings, setSettingsState] = useState<SystemSettings>(() => {
     try {
@@ -461,6 +461,89 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('agent_profile', JSON.stringify(sanitized));
   };
 
+  // Listen for Chrome Extension message events (using window.postMessage for cross-world compatibility)
+  useEffect(() => {
+    const handleExtensionMessage = async (event: MessageEvent) => {
+      // Security check: only trust messages from our own window
+      if (event.source !== window) return;
+
+      const message = event.data;
+      if (!message || message.source !== 'TALENTFLOW_EXTENSION') return;
+
+      if (message.type === 'TALENTFLOW_ANALYZE_REQUEST') {
+        const { requestId, data } = message;
+        if (!requestId || !data) return;
+
+        try {
+          console.log('[TalentFlow State] Running real-time LinkedIn analysis for request:', requestId);
+          const analysisResult = await analyzeJobMatch(data.description, profile);
+          
+          window.postMessage({
+            source: 'TALENTFLOW_APP',
+            type: 'TALENTFLOW_ANALYZE_RESPONSE',
+            requestId,
+            success: true,
+            result: analysisResult
+          }, '*');
+        } catch (err: any) {
+          console.error('[TalentFlow State] Analysis request failed:', err);
+          window.postMessage({
+            source: 'TALENTFLOW_APP',
+            type: 'TALENTFLOW_ANALYZE_RESPONSE',
+            requestId,
+            success: false,
+            error: err?.message || 'AI analysis failed'
+          }, '*');
+        }
+      } else if (message.type === 'TALENTFLOW_SAVE_JOB_REQUEST') {
+        const { requestId, data } = message;
+        if (!requestId || !data) return;
+
+        try {
+          console.log('[TalentFlow State] Saving job from extension to Ready queue:', data.role, 'at', data.company);
+          
+          const newApp: JobApplication = {
+            id: `job_${Date.now()}`,
+            company: data.company || 'Unknown Company',
+            role: data.role || 'Software Engineer',
+            status: 'ready', // Save to "Ready to Apply" queue
+            dateAdded: new Date().toISOString(),
+            url: data.url || '',
+            description: data.description || '',
+            matchScore: data.matchScore,
+            extractedKeywords: data.matchingKeywords || [],
+            tailoredResumeSnippet: data.tailoredResumeSnippet || '',
+            tailoredCoverLetter: data.tailoredCoverLetter || '',
+            tailoredSkills: data.tailoredSkills || [],
+            interviewPrep: data.interviewPrep || []
+          };
+          
+          addApplication(newApp);
+
+          window.postMessage({
+            source: 'TALENTFLOW_APP',
+            type: 'TALENTFLOW_SAVE_JOB_RESPONSE',
+            requestId,
+            success: true,
+            id: newApp.id
+          }, '*');
+        } catch (err: any) {
+          console.error('[TalentFlow State] Save request from extension failed:', err);
+          window.postMessage({
+            source: 'TALENTFLOW_APP',
+            type: 'TALENTFLOW_SAVE_JOB_RESPONSE',
+            requestId,
+            success: false,
+            error: err?.message || 'Failed to save job application'
+          }, '*');
+        }
+      }
+    };
+
+    window.addEventListener('message', handleExtensionMessage);
+    return () => window.removeEventListener('message', handleExtensionMessage);
+  }, [profile]);
+
   // Persist Applications
   const [applications, setApplicationsState] = useState<JobApplication[]>(() => {
     try {
@@ -491,6 +574,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       return nextApps;
     });
   };
+
+
 
   const deleteApplication = (id: string) => {
     setApplicationsState(prev => {

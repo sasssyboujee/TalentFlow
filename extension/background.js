@@ -1,3 +1,9 @@
+// background.js — Service Worker for TalentFlow
+// Handles communication between extension popups, content scripts, and the React app
+
+// In-memory map to store active callback references for in-flight requests
+const pendingRequests = new Map();
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'sendToApp') {
     handleSendToApp(message.data)
@@ -5,37 +11,126 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch((err) => sendResponse({ success: false, error: err.message }));
     return true; // Keep channel open for async response
   }
+
+  if (message.action === 'ANALYZE_JOB_ON_PAGE') {
+    handlePageAnalysis(message.data, sendResponse);
+    return true; // Keep channel open for async response
+  }
+
+  if (message.action === 'ANALYZE_JOB_RESPONSE_BRIDGE') {
+    const { requestId, success, result, error } = message;
+    const pendingCb = pendingRequests.get(requestId);
+    if (pendingCb) {
+      console.log('[TalentFlow Background] Resolving pending analysis callback for Request ID:', requestId);
+      pendingCb({ success, result, error });
+      pendingRequests.delete(requestId);
+    }
+    return false;
+  }
+
+  if (message.action === 'SAVE_JOB_TO_PIPELINE') {
+    handleSaveJob(message.data, sendResponse);
+    return true; // Keep channel open for async response
+  }
+
+  if (message.action === 'SAVE_JOB_RESPONSE_BRIDGE') {
+    const { requestId, success, id, error } = message;
+    const pendingCb = pendingRequests.get(requestId);
+    if (pendingCb) {
+      console.log('[TalentFlow Background] Resolving pending save callback for Request ID:', requestId);
+      pendingCb({ success, id, error });
+      pendingRequests.delete(requestId);
+    }
+    return false;
+  }
 });
 
-async function handleSendToApp(data) {
-  const { url, jdText, autoRun } = data;
-  
-  // Query all tabs to find an open AutoJob-Agent page
+async function handlePageAnalysis(jobData, sendResponse) {
+  try {
+    const appTab = await findAppTab();
+    if (!appTab) {
+      sendResponse({ success: false, error: 'Dashboard tab not found' });
+      return;
+    }
+
+    const requestId = `req_analysis_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    console.log('[TalentFlow Background] Initiating analysis request. ID:', requestId, 'Target Tab:', appTab.id);
+    
+    pendingRequests.set(requestId, sendResponse);
+
+    chrome.tabs.sendMessage(appTab.id, {
+      action: 'TALENTFLOW_ANALYZE_JOB_BRIDGE',
+      requestId,
+      data: jobData
+    }, (res) => {
+      if (chrome.runtime.lastError) {
+        console.error('[TalentFlow Background] Error sending analysis message:', chrome.runtime.lastError);
+        pendingRequests.delete(requestId);
+        sendResponse({ success: false, error: 'Failed to communicate with App content script' });
+      }
+    });
+
+  } catch (err) {
+    console.error('[TalentFlow Background] Error in page analysis:', err);
+    sendResponse({ success: false, error: err.message });
+  }
+}
+
+async function handleSaveJob(jobData, sendResponse) {
+  try {
+    const appTab = await findAppTab();
+    if (!appTab) {
+      sendResponse({ success: false, error: 'Dashboard tab not found' });
+      return;
+    }
+
+    const requestId = `req_save_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    console.log('[TalentFlow Background] Initiating save request. ID:', requestId, 'Target Tab:', appTab.id);
+    
+    pendingRequests.set(requestId, sendResponse);
+
+    chrome.tabs.sendMessage(appTab.id, {
+      action: 'TALENTFLOW_SAVE_JOB_BRIDGE',
+      requestId,
+      data: jobData
+    }, (res) => {
+      if (chrome.runtime.lastError) {
+        console.error('[TalentFlow Background] Error sending save message:', chrome.runtime.lastError);
+        pendingRequests.delete(requestId);
+        sendResponse({ success: false, error: 'Failed to communicate with App content script' });
+      }
+    });
+
+  } catch (err) {
+    console.error('[TalentFlow Background] Error in save job handler:', err);
+    sendResponse({ success: false, error: err.message });
+  }
+}
+
+async function findAppTab() {
   const tabs = await chrome.tabs.query({});
-  const appTab = tabs.find(t => t.url && (
+  return tabs.find(t => t.url && (
     t.url.startsWith('http://localhost') || 
     t.url.startsWith('https://localhost') ||
     t.url.startsWith('http://127.0.0.1') || 
     t.url.startsWith('https://127.0.0.1') ||
     (t.title && t.title.includes('TalentFlow') && !t.url.includes('chrome-extension://'))
   ));
+}
+
+async function handleSendToApp(data) {
+  const { url, jdText, autoRun } = data;
+  const appTab = await findAppTab();
   
   if (appTab) {
-    // Bring the tab and window to focus
     await chrome.windows.update(appTab.windowId, { focused: true });
     await chrome.tabs.update(appTab.id, { active: true });
-    
-    // Inject the DOM event dispatcher
     await injectEvent(appTab.id, url, jdText, autoRun);
   } else {
-    // Open a new tab
     const newTab = await chrome.tabs.create({ url: 'http://localhost:3000/', active: true });
-    
-    // Wait for the tab to load before sending the job details
     const listener = async (tabId, changeInfo) => {
       if (tabId === newTab.id && changeInfo.status === 'complete') {
         chrome.tabs.onUpdated.removeListener(listener);
-        // Wait a short delay to ensure React hooks are set up
         await new Promise(resolve => setTimeout(resolve, 800));
         await injectEvent(tabId, url, jdText, autoRun);
       }
@@ -48,7 +143,7 @@ async function injectEvent(tabId, url, jdText, autoRun) {
   try {
     await chrome.scripting.executeScript({
       target: { tabId },
-      world: 'MAIN', // Execute directly in the main page's JavaScript context
+      world: 'MAIN',
       func: (u, j, a) => {
         window.dispatchEvent(new CustomEvent('AUTOJOB_EXTENSION_SEND', {
           detail: { url: u, jdText: j, autoRun: a }

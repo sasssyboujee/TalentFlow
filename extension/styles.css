@@ -53,11 +53,10 @@ body {
   gap: 8px;
 }
 
-.logo-orb {
-  width: 14px;
-  height: 14px;
-  background-color: var(--color-primary);
-  border-radius: 4px;
+.logo-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }
 
 .logo-text {
