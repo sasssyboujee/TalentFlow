@@ -32,9 +32,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Listen for messages from React context (main world)
 window.addEventListener('message', (event) => {
-  // Security guard: only accept messages from our own window
-  if (event.source !== window) return;
-
   const message = event.data;
   if (!message || message.source !== 'TALENTFLOW_APP') return;
 
@@ -49,14 +46,15 @@ window.addEventListener('message', (event) => {
       error
     });
   } else if (message.type === 'TALENTFLOW_SAVE_JOB_RESPONSE') {
-    const { requestId, success, id, error } = message;
+    const { requestId, success, id, error, alreadyAdded } = message;
     console.log('[TalentFlow App Content Script] Received save response from React, forwarding to background.js. ID:', requestId);
     chrome.runtime.sendMessage({
       action: 'SAVE_JOB_RESPONSE_BRIDGE',
       requestId,
       success,
       id,
-      error
+      error,
+      alreadyAdded
     });
   }
 });

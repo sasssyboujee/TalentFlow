@@ -34,11 +34,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === 'SAVE_JOB_RESPONSE_BRIDGE') {
-    const { requestId, success, id, error } = message;
+    const { requestId, success, id, error, alreadyAdded } = message;
     const pendingCb = pendingRequests.get(requestId);
     if (pendingCb) {
       console.log('[TalentFlow Background] Resolving pending save callback for Request ID:', requestId);
-      pendingCb({ success, id, error });
+      pendingCb({ success, id, error, alreadyAdded });
       pendingRequests.delete(requestId);
     }
     return false;

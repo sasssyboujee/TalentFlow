@@ -58,12 +58,14 @@
     /* Floating Action Button */
     .tf-float-btn {
       position: fixed;
-      bottom: 24px;
+      bottom: 90px; /* Elevated to float cleanly above the messaging drawer */
       right: 24px;
       z-index: 99999;
-      background: #111111;
+      background: rgba(17, 17, 17, 0.9);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       color: #ffffff;
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 9999px;
       padding: 12px 20px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -75,13 +77,14 @@
       align-items: center;
       gap: 8px;
       cursor: pointer;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4), 0 8px 16px -6px rgba(0, 0, 0, 0.3);
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .tf-float-btn:hover {
-      background: #242424;
+      background: rgba(36, 36, 36, 0.95);
       transform: translateY(-2px);
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.5), 0 10px 20px -5px rgba(0, 0, 0, 0.4);
+      border-color: rgba(255, 255, 255, 0.35);
     }
     .tf-float-btn svg {
       width: 16px;
@@ -573,7 +576,7 @@
       }
 
       // Render the AI matching result metrics
-      renderResult(response.result);
+      renderResult(response.result, jobDetails);
     });
   }
 
@@ -591,7 +594,7 @@
     retryBtn.addEventListener('click', runAnalysis);
   }
 
-  function renderResult(result) {
+  function renderResult(result, jobDetails) {
     const score = result.matchScore || 0;
     const r = 30; // Radius
     const circ = 2 * Math.PI * r; // ~188.5
@@ -705,12 +708,22 @@
         if (response && response.success) {
           progressBar.style.width = '100%';
           setTimeout(() => {
-            saveBtn.innerHTML = `
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-              </svg>
-              <span>Saved to Pipeline!</span>
-            `;
+            if (response.alreadyAdded) {
+              saveBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Already Added!</span>
+              `;
+              saveBtn.style.backgroundColor = '#6b7280'; // Gray out
+            } else {
+              saveBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                <span>Saved to Pipeline!</span>
+              `;
+            }
             saveBtn.disabled = true;
             progressContainer.style.display = 'none';
           }, 300);

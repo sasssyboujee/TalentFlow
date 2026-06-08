@@ -461,12 +461,40 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('agent_profile', JSON.stringify(sanitized));
   };
 
+  // Persist Applications
+  const [applications, setApplicationsState] = useState<JobApplication[]>(() => {
+    try {
+      const saved = localStorage.getItem('agent_applications');
+      return saved ? JSON.parse(saved) : INITIAL_JOBS;
+    } catch {
+      return INITIAL_JOBS;
+    }
+  });
+
+  const saveApplications = (apps: JobApplication[]) => {
+    setApplicationsState(apps);
+    localStorage.setItem('agent_applications', JSON.stringify(apps));
+  };
+
+  const addApplication = (app: JobApplication) => {
+    setApplicationsState(prev => {
+      const nextApps = [app, ...prev];
+      localStorage.setItem('agent_applications', JSON.stringify(nextApps));
+      return nextApps;
+    });
+  };
+
+  const addApplications = (newApps: JobApplication[]) => {
+    setApplicationsState(prev => {
+      const nextApps = [...newApps, ...prev];
+      localStorage.setItem('agent_applications', JSON.stringify(nextApps));
+      return nextApps;
+    });
+  };
+
   // Listen for Chrome Extension message events (using window.postMessage for cross-world compatibility)
   useEffect(() => {
     const handleExtensionMessage = async (event: MessageEvent) => {
-      // Security check: only trust messages from our own window
-      if (event.source !== window) return;
-
       const message = event.data;
       if (!message || message.source !== 'TALENTFLOW_EXTENSION') return;
 
@@ -502,6 +530,30 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         try {
           console.log('[TalentFlow State] Saving job from extension to Ready queue:', data.role, 'at', data.company);
           
+          // Helper to normalize URLs for robust duplicate checking (strips query parameters and trailing slashes)
+          const cleanUrl = (urlStr: string) => {
+            try {
+              const u = new URL(urlStr);
+              return (u.hostname + u.pathname).replace(/\/$/, '').toLowerCase();
+            } catch {
+              return urlStr.toLowerCase().replace(/\/$/, '');
+            }
+          };
+
+          const isDuplicate = data.url ? applications.some(app => app.url && cleanUrl(app.url) === cleanUrl(data.url)) : false;
+
+          if (isDuplicate) {
+            console.log('[TalentFlow State] Job is already in tracker:', data.url);
+            window.postMessage({
+              source: 'TALENTFLOW_APP',
+              type: 'TALENTFLOW_SAVE_JOB_RESPONSE',
+              requestId,
+              success: true,
+              alreadyAdded: true
+            }, '*');
+            return;
+          }
+
           const newApp: JobApplication = {
             id: `job_${Date.now()}`,
             company: data.company || 'Unknown Company',
@@ -525,6 +577,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
             type: 'TALENTFLOW_SAVE_JOB_RESPONSE',
             requestId,
             success: true,
+            alreadyAdded: false,
             id: newApp.id
           }, '*');
         } catch (err: any) {
@@ -542,38 +595,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
     window.addEventListener('message', handleExtensionMessage);
     return () => window.removeEventListener('message', handleExtensionMessage);
-  }, [profile]);
+  }, [profile, applications]);
 
-  // Persist Applications
-  const [applications, setApplicationsState] = useState<JobApplication[]>(() => {
-    try {
-      const saved = localStorage.getItem('agent_applications');
-      return saved ? JSON.parse(saved) : INITIAL_JOBS;
-    } catch {
-      return INITIAL_JOBS;
-    }
-  });
 
-  const saveApplications = (apps: JobApplication[]) => {
-    setApplicationsState(apps);
-    localStorage.setItem('agent_applications', JSON.stringify(apps));
-  };
-
-  const addApplication = (app: JobApplication) => {
-    setApplicationsState(prev => {
-      const nextApps = [app, ...prev];
-      localStorage.setItem('agent_applications', JSON.stringify(nextApps));
-      return nextApps;
-    });
-  };
-
-  const addApplications = (newApps: JobApplication[]) => {
-    setApplicationsState(prev => {
-      const nextApps = [...newApps, ...prev];
-      localStorage.setItem('agent_applications', JSON.stringify(nextApps));
-      return nextApps;
-    });
-  };
 
 
 
