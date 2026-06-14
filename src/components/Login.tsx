@@ -271,9 +271,9 @@ export function Login() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-3 bg-ink hover:bg-primary-focus dark:bg-white dark:hover:bg-primary-focus/90 text-white dark:text-ink text-sm font-semibold rounded-lg flex items-center justify-center gap-2 border-none outline-none shadow-product transition-all cursor-pointer disabled:opacity-50"
+                className="w-full py-3 bg-ink hover:bg-primary-focus dark:bg-white dark:hover:bg-primary-focus/90 text-on-primary text-sm font-semibold rounded-lg flex items-center justify-center gap-2 border-none outline-none shadow-product transition-all cursor-pointer disabled:opacity-50"
               >
-                {isSubmitting ? 'Verifying Credentials...' : 'Log In Securely'}
+                {isSubmitting ? 'Verifying Credentials...' : 'Login'}
               </button>
 
               <div className="relative flex py-2 items-center">
@@ -411,7 +411,7 @@ export function Login() {
             <div className="pt-2">
               <button
                 type="submit"
-                className="w-full py-3 bg-ink hover:bg-primary-focus dark:bg-white dark:hover:bg-primary-focus/90 text-white dark:text-ink text-sm font-semibold rounded-lg flex items-center justify-center gap-2 border-none outline-none shadow-product transition-all cursor-pointer"
+                className="w-full py-3 bg-ink hover:bg-primary-focus dark:bg-white dark:hover:bg-primary-focus/90 text-on-primary text-sm font-semibold rounded-lg flex items-center justify-center gap-2 border-none outline-none shadow-product transition-all cursor-pointer"
               >
                 Register & Create Account
               </button>
