@@ -46,6 +46,7 @@ export interface JobApplication {
   matchScore?: number;
   extractedKeywords?: string[];
   relevantProjectIds?: string[];
+  autoSelectProjects?: boolean;
   tailoredResumeSnippet?: string;
   tailoredCoverLetter?: string;
   tailoredSkills?: string[];

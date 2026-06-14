@@ -10,7 +10,7 @@ interface ResumeTemplateProps {
 export function ResumeTemplate({ profile, app }: ResumeTemplateProps) {
   const { settings } = useAppState();
 
-  const displayProjects = app?.relevantProjectIds && app.relevantProjectIds.length > 0
+  const displayProjects = app?.relevantProjectIds && app.relevantProjectIds.length > 0 && app.autoSelectProjects !== false
     ? profile.projects.filter(p => app.relevantProjectIds!.includes(p.id))
     : profile.projects.slice(0, 2);
 

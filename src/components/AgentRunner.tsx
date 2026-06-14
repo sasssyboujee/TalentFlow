@@ -113,7 +113,6 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
   const setLogs = (val: AgentLog[] | ((prev: AgentLog[]) => AgentLog[])) => setRunnerState(prev => ({ ...prev, logs: typeof val === 'function' ? val(prev.logs) : val }));
   const setCurrentStep = (val: number) => setRunnerState(prev => ({ ...prev, currentStep: val }));
 
-  const [autoSelectProjects, setAutoSelectProjects] = useState(!!settings.autoSelectProjects);
   const [showConsole, setShowConsole] = useState(false);
 
   const [tokenStats, setTokenStats] = useState<any>(() => {
@@ -171,10 +170,6 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
       }
     }
   }, [profile, targetTitle, location]);
-
-  useEffect(() => {
-    setAutoSelectProjects(!!settings.autoSelectProjects);
-  }, [settings.autoSelectProjects]);
 
   const providerName = settings.activeProvider === 'deepseek' ? 'DeepSeek' : 'Gemini';
 
@@ -435,7 +430,7 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
         tailoredResumeSnippet: analysis.tailoredResumeSnippet,
         tailoredCoverLetter: analysis.tailoredCoverLetter,
         tailoredSkills: analysis.tailoredSkills,
-        relevantProjectIds: autoSelectProjects ? (analysis.relevantProjectIds || []) : [],
+        relevantProjectIds: analysis.relevantProjectIds || [],
         interviewPrep: analysis.interviewPrep,
         skillCategories: analysis.skillCategories,
         agentLogs: runLogs
@@ -734,22 +729,6 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
                   </div>
                 )}
 
-                {inputMode !== 'discover' && (
-                  <div className="flex items-start gap-3.5 p-4 bg-canvas border border-hairline-light rounded-xl hover:border-hairline-strong/20 hover:bg-surface-soft/40 transition-all duration-300 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      id="autoSelectProjects"
-                      checked={autoSelectProjects}
-                      onChange={(e) => setAutoSelectProjects(e.target.checked)}
-                      disabled={isRunning}
-                      className="mt-0.5 accent-primary cursor-pointer w-4 h-4 rounded"
-                    />
-                    <div>
-                      <label htmlFor="autoSelectProjects" className="text-xs font-bold text-ink block cursor-pointer">Auto-select relevant projects</label>
-                      <span className="text-[10px] text-mute mt-1 block leading-normal">Filter and display only the most matching projects on the tailored resume.</span>
-                    </div>
-                  </div>
-                )}
               </div>
 
               <button

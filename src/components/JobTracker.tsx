@@ -992,6 +992,15 @@ function JobDetailsModal({ app, profile, isOpen, onClose }: JobDetailsModalProps
                         </div>
 
                         {/* Save & Download Controls */}
+                        <label className="flex items-center gap-2 px-3 py-2 border border-hairline-light rounded-md text-xs font-semibold text-ink cursor-pointer hover:bg-surface-soft transition-colors select-none">
+                          <input
+                            type="checkbox"
+                            checked={app.autoSelectProjects !== false}
+                            onChange={(e) => updateApplicationDetails(app.id, { autoSelectProjects: e.target.checked })}
+                            className="accent-primary cursor-pointer w-4 h-4 rounded"
+                          />
+                          <span>Auto-select projects</span>
+                        </label>
                         <button
                           onClick={handleSaveEditedResume}
                           disabled={!isResumeDirty}
