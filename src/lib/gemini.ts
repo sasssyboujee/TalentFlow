@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { UserProfile } from '../types';
+import { UserProfile, TailoredProject } from '../types';
 
 // Initialize the Google Gen AI SDK
 // The API key is injected via Vite's `define` config
@@ -260,6 +260,7 @@ export interface JobMatchAnalysis {
   tailoredCoverLetter: string;
   tailoredSkills: string[];
   relevantProjectIds: string[];
+  tailoredProjects: TailoredProject[];
   interviewPrep: { question: string; answer: string }[];
   skillCategories: { category: string; userScore: number; jobDemandScore: number }[];
 }
@@ -302,7 +303,7 @@ Summary: ${profile.summary}
 Experience:
 ${profile.experience?.map(e => `- ${e.role} at ${e.company} (${e.startDate} - ${e.endDate}): ${e.description}`).join('\n')}
 Projects:
-${profile.projects?.map(p => `- ${p.name} (${p.technologies.join(', ')}): ${p.description}`).join('\n')}
+${profile.projects?.map(p => `- ID: "${p.id}", Name: "${p.name}" (${p.technologies.join(', ')}): ${p.description}`).join('\n')}
 Education:
 ${profile.education?.map(edu => `- ${edu.degree} from ${edu.school} (${edu.graduationDate})`).join('\n')}
 
@@ -315,10 +316,11 @@ INSTRUCTIONS:
 3. Identify "matchingKeywords" (skills the user has that the job requires) and "missingKeywords" (skills the job requires that the user is missing).
 4. Generate a "tailoredResumeSnippet". This is a professional summary written in the first person that highlights the user's matching skills and aligns their experience with the job description. ${resumeSnippetConstraint} Output as clean, raw plain-text ONLY. Do NOT use markdown styling, asterisks for bolding, or markdown lists.
 5. Generate a "tailoredCoverLetter". This is a full, professional cover letter (3-4 paragraphs, roughly 250-350 words) written in the first person. Start the cover letter directly with the formal salutation (e.g., 'Dear Hiring Team,' or 'Dear [Company] Hiring Team,') and sign off professionally. Do NOT include sender contact info headers, addresses, or duplicate date headers at the very top, as these are already rendered by the page layout template. Use the current date (${todayStr}) for any date mentions or date headers if needed. Format using Markdown.
-6. Generate "relevantProjectIds". Analyze the user's projects against the job description and return an array of up to 2 string IDs of the most relevant projects. If none are relevant, return an empty array.
-7. Generate "interviewPrep". A list of 3 to 5 realistic technical or behavioral questions specific to this role that the interviewer might ask, along with highly tailored, recommended answers based on the user's background.
-8. Score "skillCategories". Analyze and rate both the user's current skill and the job's demand (0 to 100) across these 5 categories: "Frontend", "Backend", "AI / Data", "DevOps", and "Soft Skills".
-9. Generate "tailoredSkills". Select the user's relevant skills from their profile, and automatically add 2 to 4 key realistic technical skills mentioned in the job description that the user could reasonably possess or pick up quickly (do not add overly advanced or completely unrelated skills to keep it realistic and not too ambitious). Combine these into a single array of up to 15-18 skills total.
+6. Generate "relevantProjectIds". Analyze the user's projects against the job description and return an array of up to 2 string IDs of the most relevant projects. You MUST select and return the EXACT "ID" string (e.g. "proj-1" or timestamp format string) of the matching projects from the user profile above. If none are relevant, return an empty array.
+7. Generate "tailoredProjects". For each project in the user's profile, generate a tailored version of the project description (2-3 sentences, roughly 45-60 words) written in the first person or active voice, highlighting the skills and technologies from the Job Description that were used. Maintain the exact same project name, ID, and technologies list, but rewrite the description to optimize for relevancy.
+8. Generate "interviewPrep". A list of 3 to 5 realistic technical or behavioral questions specific to this role that the interviewer might ask, along with highly tailored, recommended answers based on the user's background.
+9. Score "skillCategories". Analyze and rate both the user's current skill and the job's demand (0 to 100) across these 5 categories: "Frontend", "Backend", "AI / Data", "DevOps", and "Soft Skills".
+10. Generate "tailoredSkills". Select the user's relevant skills from their profile, and automatically add 2 to 4 key realistic technical skills mentioned in the job description that the user could reasonably possess or pick up quickly (do not add overly advanced or completely unrelated skills to keep it realistic and not too ambitious). Combine these into a single array of up to 15-18 skills total.
 
 Output MUST be valid JSON matching this schema:
 {
@@ -331,6 +333,14 @@ Output MUST be valid JSON matching this schema:
   "tailoredCoverLetter": "string",
   "tailoredSkills": ["string"],
   "relevantProjectIds": ["string"],
+  "tailoredProjects": [
+    {
+      "id": "string",
+      "name": "string",
+      "description": "string",
+      "technologies": ["string"]
+    }
+  ],
   "interviewPrep": [
     {
       "question": "string",
@@ -749,6 +759,7 @@ export interface TailoredJobAssets {
   tailoredResumeSnippet: string;
   tailoredCoverLetter: string;
   tailoredSkills: string[];
+  tailoredProjects: TailoredProject[];
   interviewPrep: { question: string; answer: string }[];
 }
 
@@ -789,7 +800,7 @@ Summary: ${profile.summary}
 Experience:
 ${profile.experience?.map(e => `- ${e.role} at ${e.company} (${e.startDate} - ${e.endDate}): ${e.description}`).join('\n')}
 Projects:
-${profile.projects?.map(p => `- ${p.name} (${p.technologies.join(', ')}): ${p.description}`).join('\n')}
+${profile.projects?.map(p => `- ID: "${p.id}", Name: "${p.name}" (${p.technologies.join(', ')}): ${p.description}`).join('\n')}
 
 JOB DETAILS:
 Role: ${job.role} at ${job.company}
@@ -801,13 +812,22 @@ INSTRUCTIONS:
 1. Generate a "tailoredResumeSnippet". This is a professional summary written in the first person that highlights the user's matching skills and aligns their experience with the job description. ${resumeSnippetConstraint} Output as clean, raw plain-text ONLY. Do NOT use markdown styling, asterisks for bolding, or markdown lists.
 2. Generate a "tailoredCoverLetter". This is a full, professional cover letter (3-4 paragraphs, roughly 250-350 words) written in the first person. Start the cover letter directly with the formal salutation (e.g., 'Dear Hiring Team,' or 'Dear [Company] Hiring Team,') and sign off professionally. Do NOT include sender contact info headers, addresses, or duplicate date headers at the very top. Use the current date (${todayStr}) for any date mentions or date headers if needed. Format using Markdown.
 3. Generate "tailoredSkills". Select the user's relevant skills from their profile, and automatically add 2 to 4 key realistic technical skills mentioned in the job description that the user could reasonably possess or pick up quickly. Combine these into a single array of up to 15-18 skills total.
-4. Generate "interviewPrep". A list of 3 to 5 realistic technical or behavioral questions specific to this role that the interviewer might ask, along with highly tailored, recommended answers based on the user's background.
+4. Generate "tailoredProjects". For each project in the user's profile, generate a tailored version of the project description (2-3 sentences, roughly 45-60 words) written in the first person or active voice, highlighting the skills and technologies from the Job Description that were used. Maintain the exact same project name, ID, and technologies list, but rewrite the description to optimize for relevancy.
+5. Generate "interviewPrep". A list of 3 to 5 realistic technical or behavioral questions specific to this role that the interviewer might ask, along with highly tailored, recommended answers based on the user's background.
 
 Output MUST be valid JSON matching this schema exactly:
 {
   "tailoredResumeSnippet": "string",
   "tailoredCoverLetter": "string",
   "tailoredSkills": ["string"],
+  "tailoredProjects": [
+    {
+      "id": "string",
+      "name": "string",
+      "description": "string",
+      "technologies": ["string"]
+    }
+  ],
   "interviewPrep": [
     {
       "question": "string",

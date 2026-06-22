@@ -34,6 +34,14 @@ export interface SkillCategoryScore {
   jobDemandScore: number;
 }
 
+export interface TailoredProject {
+  id: string;
+  name: string;
+  description: string;
+  technologies: string[];
+  url?: string;
+}
+
 export interface JobApplication {
   id: string;
   company: string;
@@ -46,10 +54,10 @@ export interface JobApplication {
   matchScore?: number;
   extractedKeywords?: string[];
   relevantProjectIds?: string[];
-  autoSelectProjects?: boolean;
   tailoredResumeSnippet?: string;
   tailoredCoverLetter?: string;
   tailoredSkills?: string[];
+  tailoredProjects?: TailoredProject[];
   interviewPrep?: InterviewQuestion[];
   skillCategories?: SkillCategoryScore[];
   agentLogs?: AgentLog[];
@@ -98,7 +106,6 @@ export interface SystemSettings {
   minMatchThreshold: number;
   autoOverwriteSkills: boolean;
   autoExtractLocation: boolean;
-  autoSelectProjects: boolean;
   strictOnePage: boolean;
   resumeTheme: string;
   resumeFont: string;

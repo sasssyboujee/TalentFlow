@@ -396,22 +396,6 @@ export function SettingsManager() {
                   <span className="text-[10px] text-mute mt-0.5 block">Extract location fields during parsing actions.</span>
                 </div>
               </label>
-
-              <label className="flex items-start gap-3 p-4 border border-hairline-light rounded-lg hover:bg-surface-soft transition-colors cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={settings.autoSelectProjects}
-                  onChange={(e) => {
-                    updateSettings({ autoSelectProjects: e.target.checked });
-                    triggerSuccessFeedback();
-                  }}
-                  className="mt-0.5 accent-primary cursor-pointer"
-                />
-                <div>
-                  <span className="text-xs font-bold text-ink block">Auto-select relevant projects</span>
-                  <span className="text-[10px] text-mute mt-0.5 block">Filter and display only the most matching projects on the tailored resume.</span>
-                </div>
-              </label>
             </div>
           </div>
         </section>

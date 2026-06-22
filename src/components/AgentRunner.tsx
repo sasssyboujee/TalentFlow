@@ -431,6 +431,7 @@ export function AgentRunner({ isEmbedded = false, onClose }: AgentRunnerProps) {
         tailoredCoverLetter: analysis.tailoredCoverLetter,
         tailoredSkills: analysis.tailoredSkills,
         relevantProjectIds: analysis.relevantProjectIds || [],
+        tailoredProjects: analysis.tailoredProjects || [],
         interviewPrep: analysis.interviewPrep,
         skillCategories: analysis.skillCategories,
         agentLogs: runLogs

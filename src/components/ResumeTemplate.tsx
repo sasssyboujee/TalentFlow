@@ -10,9 +10,14 @@ interface ResumeTemplateProps {
 export function ResumeTemplate({ profile, app }: ResumeTemplateProps) {
   const { settings } = useAppState();
 
-  const displayProjects = app?.relevantProjectIds && app.relevantProjectIds.length > 0 && app.autoSelectProjects !== false
-    ? profile.projects.filter(p => app.relevantProjectIds!.includes(p.id))
-    : profile.projects.slice(0, 2);
+  const selectedIds = app?.relevantProjectIds !== undefined
+    ? app.relevantProjectIds
+    : (profile.projects || []).slice(0, 2).map(p => p.id);
+
+  const displayProjects = (profile.projects || []).filter(p => selectedIds.includes(p.id)).map(p => {
+    const tailoredProj = app?.tailoredProjects?.find(tp => tp.id === p.id);
+    return tailoredProj || p;
+  });
 
   // Map settings to actual CSS values/classes
   const fontFamilyMap: Record<string, string> = {

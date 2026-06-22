@@ -526,6 +526,7 @@ function JobDetailsModal({ app, profile, isOpen, onClose }: JobDetailsModalProps
               tailoredResumeSnippet: assets.tailoredResumeSnippet,
               tailoredCoverLetter: assets.tailoredCoverLetter,
               tailoredSkills: assets.tailoredSkills,
+              tailoredProjects: assets.tailoredProjects,
               interviewPrep: assets.interviewPrep
             });
             setEditedResumeSnippet(assets.tailoredResumeSnippet);
@@ -991,16 +992,7 @@ function JobDetailsModal({ app, profile, isOpen, onClose }: JobDetailsModalProps
                           </button>
                         </div>
 
-                        {/* Save & Download Controls */}
-                        <label className="flex items-center gap-2 px-3 py-2 border border-hairline-light rounded-md text-xs font-semibold text-ink cursor-pointer hover:bg-surface-soft transition-colors select-none">
-                          <input
-                            type="checkbox"
-                            checked={app.autoSelectProjects !== false}
-                            onChange={(e) => updateApplicationDetails(app.id, { autoSelectProjects: e.target.checked })}
-                            className="accent-primary cursor-pointer w-4 h-4 rounded"
-                          />
-                          <span>Auto-select projects</span>
-                        </label>
+
                         <button
                           onClick={handleSaveEditedResume}
                           disabled={!isResumeDirty}
@@ -1039,10 +1031,43 @@ function JobDetailsModal({ app, profile, isOpen, onClose }: JobDetailsModalProps
                           </div>
                           <div>
                             <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-mute mb-2">Base Skills</label>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-2 mb-4">
                               {profile.skills.map((s, idx) => (
                                 <span key={idx} className="px-2 py-1 bg-surface-soft border border-hairline-light rounded text-[10px] font-semibold text-charcoal">{s}</span>
                               ))}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-mute mb-2">Included Projects</label>
+                            <div className="space-y-2 bg-surface-soft p-3 rounded border border-hairline-light max-h-[160px] overflow-y-auto">
+                              {(() => {
+                                const selectedProjectIds = app.relevantProjectIds || (profile.projects || []).slice(0, 2).map(p => p.id);
+                                return (profile.projects || []).map((proj) => {
+                                  const isChecked = selectedProjectIds.includes(proj.id);
+                                  return (
+                                    <label key={proj.id} className="flex items-start gap-2.5 text-xs text-ink cursor-pointer select-none py-1 border-b border-hairline-light/20 last:border-none">
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={(e) => {
+                                          const nextIds = e.target.checked
+                                            ? [...selectedProjectIds, proj.id]
+                                            : selectedProjectIds.filter(id => id !== proj.id);
+                                          updateApplicationDetails(app.id, { relevantProjectIds: nextIds });
+                                        }}
+                                        className="accent-primary cursor-pointer w-4 h-4 rounded mt-0.5"
+                                      />
+                                      <div className="min-w-0">
+                                        <span className="font-semibold block text-slate-800 text-[11px] truncate">{proj.name}</span>
+                                        <span className="text-[9px] text-mute font-mono truncate block mt-0.5">{proj.technologies.slice(0, 3).join(', ')}</span>
+                                      </div>
+                                    </label>
+                                  );
+                                });
+                              })()}
+                              {(profile.projects || []).length === 0 && (
+                                <p className="text-xs text-mute italic">No projects found in your profile.</p>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1076,12 +1101,40 @@ function JobDetailsModal({ app, profile, isOpen, onClose }: JobDetailsModalProps
                           </div>
                           <div>
                             <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-primary mb-2">Tailored Target Skills</label>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-2 mb-4">
                               {(app.tailoredSkills || app.extractedKeywords || []).map((s, idx) => (
                                 <span key={idx} className="px-2 py-1 bg-primary/5 border border-primary/20 rounded text-[10px] font-semibold text-primary">{s}</span>
                               ))}
                               {(app.tailoredSkills || app.extractedKeywords || []).length === 0 && (
                                 <span className="text-xs text-mute italic">No tailored skills list found.</span>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-primary mb-2">Tailored Projects Preview</label>
+                            <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+                              {(() => {
+                                const selectedProjectIds = app.relevantProjectIds || (profile.projects || []).slice(0, 2).map(p => p.id);
+                                const displayed = (profile.projects || []).filter(p => selectedProjectIds.includes(p.id));
+                                return displayed.map((proj) => {
+                                  const tailoredProj = app.tailoredProjects?.find(tp => tp.id === proj.id);
+                                  return (
+                                    <div key={proj.id} className="p-3 bg-primary/2.5 border border-primary/10 rounded text-xs text-ink leading-relaxed">
+                                      <div className="flex justify-between items-baseline mb-1">
+                                        <span className="font-bold text-primary text-[11px]">{tailoredProj?.name || proj.name}</span>
+                                        <span className="text-[9px] font-semibold text-mute font-mono">
+                                          {(tailoredProj?.technologies || proj.technologies).slice(0, 3).join(', ')}
+                                        </span>
+                                      </div>
+                                      <p className="text-[10px] text-slate-600 font-sans leading-normal">
+                                        {tailoredProj?.description || proj.description}
+                                      </p>
+                                    </div>
+                                  );
+                                });
+                              })()}
+                              {(!app.relevantProjectIds || app.relevantProjectIds.length === 0) && (
+                                <p className="text-xs text-mute italic">No projects selected for this resume.</p>
                               )}
                             </div>
                           </div>
